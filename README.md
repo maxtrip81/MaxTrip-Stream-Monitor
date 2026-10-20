@@ -87,7 +87,26 @@ npm run dist:mac     # immagine macOS (.dmg)     — da eseguire su macOS
 
 Ogni installer va creato sulla propria piattaforma (FFmpeg viene incluso per il sistema su cui si compila).
 In alternativa, il workflow GitHub Actions `.github/workflows/build.yml` crea automaticamente gli installer per Windows, macOS e Linux a ogni tag `v*`.
-Per distribuire su macOS senza avvisi di sicurezza serve la firma con un Apple Developer ID (vedi la documentazione di electron-builder).
+
+**Quale file scaricare**
+
+| Sistema | File |
+|---|---|
+| Windows 10/11 | `MaxTrip-Stream-Monitor-Setup-<versione>-win-x64.exe` |
+| Mac con Apple Silicon (M1, M2, M3, M4…) | `MaxTrip-Stream-Monitor-<versione>-mac-arm64.dmg` |
+| Mac con processore Intel | `MaxTrip-Stream-Monitor-<versione>-mac-x64.dmg` |
+| Linux | `MaxTrip-Stream-Monitor-<versione>-linux-x86_64.AppImage` |
+
+Per sapere che Mac hai: menu  → *Informazioni su questo Mac* → "Chip Apple M…" = Apple Silicon, "Processore Intel" = Intel.
+
+**Primo avvio su macOS** — l'app ha una firma "ad-hoc" ma non è firmata con un Apple Developer ID, quindi macOS la blocca la prima volta:
+1. trascina l'app in *Applicazioni* e aprila: comparirà un avviso;
+2. apri *Impostazioni di Sistema → Privacy e sicurezza*, scorri in basso e premi **Apri comunque**.
+
+Se macOS dice che l'app "è danneggiata", apri il Terminale ed esegui:
+`xattr -cr "/Applications/MaxTrip Stream Monitor.app"`
+
+Per distribuire su macOS senza avvisi serve la firma con un Apple Developer ID (99 $/anno) e la notarizzazione.
 
 **Mobile (iOS / Android)** — cartella `mobile/`, basata su Capacitor
 
@@ -172,6 +191,9 @@ cd mobile && npm install && npm run add:android && npm run android   # Android
 cd mobile && npm install && npm run add:ios && npm run ios           # iOS (macOS + Xcode)
 docker build -t maxtrip-stream-monitor . && docker run -d -p 8686:8686 -v sm-data:/data maxtrip-stream-monitor
 ```
+
+Downloads: `…-win-x64.exe` (Windows), `…-mac-arm64.dmg` (Apple Silicon Macs: M1/M2/M3/M4), `…-mac-x64.dmg` (Intel Macs), `…-linux-x86_64.AppImage` (Linux).
+On first launch on macOS, open *System Settings → Privacy & Security* and click **Open Anyway** (the app is ad-hoc signed, not signed with an Apple Developer ID). If macOS reports the app as "damaged", run `xattr -cr "/Applications/MaxTrip Stream Monitor.app"`.
 
 To connect the mobile app: in the desktop app enable *Settings → Remote access*, generate a token, then enter `http://COMPUTER-IP:8686` and the token on the phone.
 For iOS add the `NSAppTransportSecurity` / `NSLocalNetworkUsageDescription` keys shown above to `Info.plist`.
