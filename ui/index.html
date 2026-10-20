@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="author" content="Massimiliano Mascioli Trippa — max@maxtrip.it">
+  <title>MaxTrip Stream Monitor</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.png" alt="" class="logo">
+      <div>
+        <h1>MaxTrip Stream Monitor</h1>
+        <p class="sub" data-i18n="appSubtitle"></p>
+      </div>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="actions">
+      <select id="langSelect" aria-label="Lingua / Language">
+        <option value="it">Italiano</option>
+        <option value="en">English</option>
+      </select>
+      <button class="btn primary" id="btnAdd"><span>＋</span> <span data-i18n="addStream"></span></button>
+      <button class="btn icon" id="btnEvents" data-i18n-title="events">☰</button>
+      <button class="btn icon" id="btnSettings" data-i18n-title="settings">⚙</button>
+      <button class="btn icon" id="btnAbout" data-i18n-title="about">ⓘ</button>
+    </div>
+  </header>
+
+  <div class="banner alarm hidden" id="alarmBanner">
+    <span class="dot"></span><span id="alarmText"></span>
+    <button class="btn small" id="btnAckAll" data-i18n="ackAll"></button>
+  </div>
+  <div class="banner warn hidden" id="connBanner" data-i18n="disconnected"></div>
+
+  <main>
+    <section class="grid" id="grid"></section>
+    <p class="empty hidden" id="empty" data-i18n="noStreams"></p>
+  </main>
+
+  <aside class="drawer hidden" id="eventsDrawer">
+    <div class="drawer-head">
+      <h2 data-i18n="events"></h2>
+      <div>
+        <button class="btn small" id="btnClearEvents" data-i18n="clearEvents"></button>
+        <button class="btn icon" id="btnCloseEvents">✕</button>
+      </div>
+    </div>
+    <ul class="events" id="eventsList"></ul>
+  </aside>
+
+  <footer class="credits">
+    <span data-i18n="createdBy"></span> <strong>Massimiliano Mascioli Trippa</strong> —
+    <a href="mailto:max@maxtrip.it">max@maxtrip.it</a>
+  </footer>
+
+  <!-- Modale flusso -->
+  <dialog id="streamDialog">
+    <form method="dialog" id="streamForm">
+      <h2 id="streamDialogTitle"></h2>
+      <label><span data-i18n="streamName"></span><input name="name" required maxlength="120" placeholder="Radio …"></label>
+      <label><span data-i18n="streamUrl"></span><input name="url" required placeholder="https://…/stream.mp3"><small data-i18n="urlHint"></small></label>
+      <label class="check"><input type="checkbox" name="enabled" checked> <span data-i18n="enable"></span></label>
+      <fieldset>
+        <legend data-i18n="overrides"></legend>
+        <div class="row3">
+          <label><span data-i18n="silenceThreshold"></span><input name="silenceThresholdDb" type="number" step="1" min="-90" max="0"></label>
+          <label><span data-i18n="silenceSeconds"></span><input name="silenceSeconds" type="number" step="1" min="1"></label>
+          <label><span data-i18n="offAirSeconds"></span><input name="offAirSeconds" type="number" step="1" min="2"></label>
+        </div>
+      </fieldset>
+      <div class="dlg-actions">
+        <button class="btn" value="cancel" formnovalidate data-i18n="cancel"></button>
+        <button class="btn primary" value="ok" data-i18n="save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modale impostazioni -->
+  <dialog id="settingsDialog" class="wide">
+    <form method="dialog" id="settingsForm">
+      <h2 data-i18n="settings"></h2>
+      <div class="tabs">
+        <fieldset>
+          <legend data-i18n="general"></legend>
+          <label><span data-i18n="language"></span>
+            <select name="language"><option value="it">Italiano</option><option value="en">English</option></select>
+          </label>
+          <label class="check"><input type="checkbox" name="alarmSound"> <span data-i18n="alarmSound"></span></label>
+          <label class="check"><input type="checkbox" name="notifyOnRecovery"> <span data-i18n="notifyOnRecovery"></span></label>
+        </fieldset>
+        <fieldset>
+          <legend data-i18n="thresholds"></legend>
+          <div class="row2">
+            <label><span data-i18n="silenceThreshold"></span><input name="silenceThresholdDb" type="number" step="1" min="-90" max="0"></label>
+            <label><span data-i18n="silenceSeconds"></span><input name="silenceSeconds" type="number" step="1" min="1"></label>
+            <label><span data-i18n="offAirSeconds"></span><input name="offAirSeconds" type="number" step="1" min="2"></label>
+            <label><span data-i18n="recoverSeconds"></span><input name="recoverSeconds" type="number" step="1" min="0"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend data-i18n="push"></legend>
+          <label class="check"><input type="checkbox" name="notify.desktop"> <span data-i18n="desktopNotify"></span></label>
+          <details open>
+            <summary><label class="check inline"><input type="checkbox" name="notify.ntfy.enabled"> ntfy</label></summary>
+            <p class="hint" data-i18n="ntfyHint"></p>
+            <label><span data-i18n="ntfyServer"></span><input name="notify.ntfy.server" placeholder="https://ntfy.sh"></label>
+            <label><span data-i18n="ntfyTopic"></span><input name="notify.ntfy.topic"></label>
+            <label><span data-i18n="ntfyToken"></span><input name="notify.ntfy.token" type="password" autocomplete="off"></label>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.telegram.enabled"> Telegram</label></summary>
+            <label><span data-i18n="tgToken"></span><input name="notify.telegram.botToken" type="password" autocomplete="off"></label>
+            <label><span data-i18n="tgChat"></span><input name="notify.telegram.chatId"></label>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.pushover.enabled"> Pushover</label></summary>
+            <label><span data-i18n="poUser"></span><input name="notify.pushover.userKey" type="password" autocomplete="off"></label>
+            <label><span data-i18n="poApp"></span><input name="notify.pushover.appToken" type="password" autocomplete="off"></label>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.webhook.enabled"> Webhook</label></summary>
+            <label><span data-i18n="webhookUrl"></span><input name="notify.webhook.url" placeholder="https://…"></label>
+          </details>
+          <button type="button" class="btn small" id="btnTestNotify" data-i18n="testNotify"></button>
+          <span class="hint" id="testResult"></span>
+        </fieldset>
+        <fieldset id="remoteFieldset">
+          <legend data-i18n="remote"></legend>
+          <label class="check"><input type="checkbox" name="remoteAccess"> <span data-i18n="remoteAccess"></span></label>
+          <label><span data-i18n="accessToken"></span>
+            <span class="inline-row"><input name="accessToken" autocomplete="off"><button type="button" class="btn small" id="btnGenToken" data-i18n="generate"></button></span>
+          </label>
+          <p class="hint" id="remoteHint"></p>
+        </fieldset>
+        <fieldset id="clientFieldset">
+          <legend data-i18n="connection"></legend>
+          <label><span data-i18n="serverUrl"></span><input id="clientServer" placeholder="http://192.168.1.10:8686"></label>
+          <label><span data-i18n="accessToken"></span><input id="clientToken" autocomplete="off"></label>
+        </fieldset>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn" value="cancel" formnovalidate data-i18n="cancel"></button>
+        <button class="btn primary" value="ok" data-i18n="save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modale connessione (app mobile / browser remoto) -->
+  <dialog id="connectDialog">
+    <form method="dialog" id="connectForm">
+      <h2 data-i18n="connectTitle"></h2>
+      <p class="hint" data-i18n="connectHint"></p>
+      <label><span data-i18n="serverUrl"></span><input name="server" required placeholder="http://192.168.1.10:8686" inputmode="url"></label>
+      <label><span data-i18n="accessToken"></span><input name="token" autocomplete="off"></label>
+      <p class="error" id="connectError"></p>
+      <div class="dlg-actions">
+        <select id="langSelect2" aria-label="Lingua / Language"><option value="it">Italiano</option><option value="en">English</option></select>
+        <button class="btn primary" value="ok" data-i18n="connect"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modale info -->
+  <dialog id="aboutDialog">
+    <form method="dialog">
+      <div class="about">
+        <img src="icon.png" alt="" class="logo big">
+        <h2>MaxTrip Stream Monitor <small id="aboutVersion"></small></h2>
+        <p data-i18n="aboutText"></p>
+        <p><span data-i18n="createdBy"></span><br><strong>Massimiliano Mascioli Trippa</strong><br>
+          <a href="mailto:max@maxtrip.it">max@maxtrip.it</a></p>
+        <p class="hint" data-i18n="install"></p>
+      </div>
+      <div class="dlg-actions"><button class="btn primary" value="ok" data-i18n="close"></button></div>
+    </form>
+  </dialog>
+
+  <template id="cardTpl">
+    <article class="card">
+      <div class="card-head">
+        <div class="title">
+          <h3 class="name"></h3>
+          <p class="url"></p>
+        </div>
+        <label class="switch" data-i18n-title="enable"><input type="checkbox" class="toggle"><span></span></label>
+      </div>
+      <div class="leds">
+        <span class="led onair"><i></i><b data-i18n="onair"></b></span>
+        <span class="led silence"><i></i><b data-i18n="silence"></b></span>
+        <span class="led offair"><i></i><b data-i18n="offair"></b></span>
+      </div>
+      <canvas class="vu" height="64"></canvas>
+      <div class="status-line"><span class="status"></span><span class="db"></span></div>
+      <p class="err"></p>
+      <div class="card-actions">
+        <button class="btn small ack hidden" data-i18n="ack"></button>
+        <button class="btn small listen" data-i18n="listen"></button>
+        <button class="btn small icon restart" data-i18n-title="restart">↻</button>
+        <button class="btn small icon edit" data-i18n-title="edit">✎</button>
+        <button class="btn small icon danger del" data-i18n-title="delete">🗑</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

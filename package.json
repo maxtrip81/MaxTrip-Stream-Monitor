@@ -1,0 +1,70 @@
+{
+  "name": "maxtrip-stream-monitor",
+  "productName": "MaxTrip Stream Monitor",
+  "version": "1.0.0",
+  "description": "Monitoraggio professionale di flussi streaming live (web radio, web TV) con VU meter, allarmi ON AIR / OFF AIR / SILENZIO e notifiche push.",
+  "author": {
+    "name": "Massimiliano Mascioli Trippa",
+    "email": "max@maxtrip.it"
+  },
+  "license": "UNLICENSED",
+  "main": "src/electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node src/server.js",
+    "test": "node test/engine.test.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "it.maxtrip.streammonitor",
+    "productName": "MaxTrip Stream Monitor",
+    "copyright": "© Massimiliano Mascioli Trippa — max@maxtrip.it",
+    "files": [
+      "src/**/*",
+      "ui/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "AudioVideo"
+    }
+  }
+}

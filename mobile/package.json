@@ -1,0 +1,24 @@
+{
+  "name": "maxtrip-stream-monitor-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App iOS / Android di MaxTrip Stream Monitor — Creato da Massimiliano Mascioli Trippa (max@maxtrip.it)",
+  "author": "Massimiliano Mascioli Trippa <max@maxtrip.it>",
+  "scripts": {
+    "sync-ui": "node scripts/copy-ui.js",
+    "add:android": "npm run sync-ui && npx cap add android",
+    "add:ios": "npm run sync-ui && npx cap add ios",
+    "sync": "npm run sync-ui && npx cap sync",
+    "android": "npm run sync && npx cap open android",
+    "ios": "npm run sync && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
+    "@capacitor/local-notifications": "^6.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

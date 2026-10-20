@@ -1,0 +1,10 @@
+{
+  "name": "MaxTrip Stream Monitor",
+  "short_name": "Stream Monitor",
+  "description": "Monitoraggio flussi live — Creato da Massimiliano Mascioli Trippa (max@maxtrip.it)",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}

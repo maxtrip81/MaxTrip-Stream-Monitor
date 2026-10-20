@@ -1,0 +1,14 @@
+{
+  "appId": "it.maxtrip.streammonitor",
+  "appName": "Stream Monitor",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#2ecc71"
+    }
+  }
+}
