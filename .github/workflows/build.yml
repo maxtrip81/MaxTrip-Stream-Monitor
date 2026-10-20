@@ -30,14 +30,22 @@ jobs:
       - run: npx electron-builder ${{ matrix.target }} --${{ matrix.arch }} --publish never
       - name: Verifica app macOS (architettura e firma)
         if: runner.os == 'macOS'
+        shell: bash
         run: |
           APP=$(find dist -maxdepth 2 -name "*.app" | head -1)
-          echo "App: $APP"
           FF="$APP/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg"
-          lipo -archs "$APP/Contents/MacOS/MaxTrip Stream Monitor"
-          lipo -archs "$FF"
-          [ "$(lipo -archs "$FF")" = "$( [ ${{ matrix.arch }} = arm64 ] && echo arm64 || echo x86_64 )" ]
-          codesign --verify --deep --strict --verbose=2 "$APP"
+          WANT=$([ "${{ matrix.arch }}" = arm64 ] && echo arm64 || echo x86_64)
+          APPARCH=$(lipo -archs "$APP/Contents/MacOS/MaxTrip Stream Monitor" 2>&1)
+          FFARCH=$(lipo -archs "$FF" 2>&1)
+          if SIGN=$(codesign --verify --deep --strict "$APP" 2>&1); then SIGNOK=1; SIGN=valid; else SIGNOK=0; SIGN=$(echo "$SIGN" | tr '\n' ' '); fi
+          INFO=$(codesign -dv "$APP" 2>&1 | grep -E "Signature|TeamIdentifier|flags" | tr '\n' ' ')
+          FFSIGN=$(codesign -dv "$FF" 2>&1 | grep -E "Signature|flags" | tr '\n' ' ')
+          echo "::notice title=${{ matrix.name }}::app=$APP | app arch=$APPARCH | ffmpeg arch=$FFARCH | sign=$SIGN | $INFO | ffmpeg: $FFSIGN"
+          ok=1
+          [ "$APPARCH" = "$WANT" ] || { echo "::error title=${{ matrix.name }}::architettura app $APPARCH != $WANT"; ok=0; }
+          [ "$FFARCH" = "$WANT" ] || { echo "::error title=${{ matrix.name }}::architettura ffmpeg $FFARCH != $WANT"; ok=0; }
+          [ $SIGNOK = 1 ] || { echo "::error title=${{ matrix.name }}::firma non valida: $SIGN"; ok=0; }
+          [ $ok = 1 ]
       - uses: actions/upload-artifact@v5
         with:
           name: stream-monitor-${{ matrix.name }}
