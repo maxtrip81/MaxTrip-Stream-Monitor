@@ -32,6 +32,7 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
+          set +e +o pipefail
           APP=$(find dist -maxdepth 2 -name "*.app" | head -1)
           FF="$APP/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg"
           WANT=$([ "${{ matrix.arch }}" = arm64 ] && echo arm64 || echo x86_64)
@@ -44,6 +45,7 @@ jobs:
           ok=1
           [ "$APPARCH" = "$WANT" ] || { echo "::error title=${{ matrix.name }}::architettura app $APPARCH != $WANT"; ok=0; }
           [ "$FFARCH" = "$WANT" ] || { echo "::error title=${{ matrix.name }}::architettura ffmpeg $FFARCH != $WANT"; ok=0; }
+          codesign --verify --strict "$FF" 2>/dev/null || { echo "::error title=${{ matrix.name }}::ffmpeg non firmato"; ok=0; }
           [ $SIGNOK = 1 ] || { echo "::error title=${{ matrix.name }}::firma non valida: $SIGN"; ok=0; }
           [ $ok = 1 ]
       - uses: actions/upload-artifact@v5
