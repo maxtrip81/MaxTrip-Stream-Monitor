@@ -9,7 +9,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-15-intel, ubuntu-latest]
+        include:
+          - { name: windows-x64, os: windows-latest, arch: x64, target: --win }
+          - { name: mac-intel, os: macos-15-intel, arch: x64, target: --mac }
+          # Apple Silicon (M1/M2/M3/M4): compilata sul runner Intel, che ha code più brevi
+          - { name: mac-apple-silicon, os: macos-15-intel, arch: arm64, target: --mac }
+          - { name: linux-x64, os: ubuntu-latest, arch: x64, target: --linux }
+    name: build (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -17,13 +23,24 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      # npm_config_arch fa scaricare a ffmpeg-static il binario FFmpeg dell'architettura di destinazione
       - run: npm ci
-      - run: npx electron-builder --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          npm_config_arch: ${{ matrix.arch }}
+      - run: npx electron-builder ${{ matrix.target }} --${{ matrix.arch }} --publish never
+      - name: Verifica app macOS (architettura e firma)
+        if: runner.os == 'macOS'
+        run: |
+          APP=$(find dist -maxdepth 2 -name "*.app" | head -1)
+          echo "App: $APP"
+          FF="$APP/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg"
+          lipo -archs "$APP/Contents/MacOS/MaxTrip Stream Monitor"
+          lipo -archs "$FF"
+          [ "$(lipo -archs "$FF")" = "$( [ ${{ matrix.arch }} = arm64 ] && echo arm64 || echo x86_64 )" ]
+          codesign --verify --deep --strict --verbose=2 "$APP"
       - uses: actions/upload-artifact@v5
         with:
-          name: stream-monitor-${{ matrix.os }}
+          name: stream-monitor-${{ matrix.name }}
           path: |
             dist/*.exe
             dist/*.dmg

@@ -47,7 +47,8 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "MaxTrip-Stream-Monitor-Setup-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -58,13 +59,17 @@
         "dmg"
       ],
       "category": "public.app-category.utilities",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "artifactName": "MaxTrip-Stream-Monitor-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "AudioVideo"
+      "category": "AudioVideo",
+      "artifactName": "MaxTrip-Stream-Monitor-${version}-linux-${arch}.${ext}"
     }
   }
 }
