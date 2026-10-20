@@ -60,7 +60,7 @@ function createWindow() {
     title: 'MaxTrip Stream Monitor',
     icon: path.join(ROOT, 'build', 'icon.png'),
     autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false }
+    webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' }
   });
   win.loadURL(`http://127.0.0.1:${engine.port}/`);
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });

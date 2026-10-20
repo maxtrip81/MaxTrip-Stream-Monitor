@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { normalizeUrl } = require('./resolve');
 
 const DEFAULT_SETTINGS = {
   language: 'it',
@@ -123,7 +124,7 @@ function sanitizeStream(s) {
   return {
     id: s.id,
     name: String(s.name || '').trim().slice(0, 120) || 'Stream',
-    url: String(s.url || '').trim(),
+    url: normalizeUrl(s.url),
     enabled: s.enabled !== false,
     silenceThresholdDb: numOrNull(s.silenceThresholdDb),
     silenceSeconds: numOrNull(s.silenceSeconds),

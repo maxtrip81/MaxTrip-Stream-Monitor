@@ -105,7 +105,8 @@ main { flex: 1; padding: 16px; }
 .vu { width: 100%; height: 64px; background: #05080c; border-radius: 6px; display: block; }
 .status-line { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .err { margin: 0; color: var(--red); font-size: 12px; min-height: 0; word-break: break-word; }
-.err:empty { display: none; }
+.err:empty, .listen-msg:empty { display: none; }
+.listen-msg { margin: 0; color: var(--accent); font-size: 12px; word-break: break-word; }
 .card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .card-actions .ack { background: var(--red); border-color: var(--red); color: #fff; }
 .card-actions .listen.playing { background: var(--accent); color: #fff; }

@@ -10,11 +10,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: windows-x64, os: windows-latest, arch: x64, target: --win }
-          - { name: mac-intel, os: macos-15-intel, arch: x64, target: --mac }
+          - { name: windows-x64, os: windows-latest, arch: x64, target: --win, test: true }
+          - { name: mac-intel, os: macos-15-intel, arch: x64, target: --mac, test: true }
           # Apple Silicon (M1/M2/M3/M4): compilata sul runner Intel, che ha code più brevi
-          - { name: mac-apple-silicon, os: macos-15-intel, arch: arm64, target: --mac }
-          - { name: linux-x64, os: ubuntu-latest, arch: x64, target: --linux }
+          # (i binari arm64 non si possono eseguire su Intel: i test girano nel job test-apple-silicon)
+          - { name: mac-apple-silicon, os: macos-15-intel, arch: arm64, target: --mac, test: false }
+          - { name: linux-x64, os: ubuntu-latest, arch: x64, target: --linux, test: true }
     name: build (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -27,6 +28,12 @@ jobs:
       - run: npm ci
         env:
           npm_config_arch: ${{ matrix.arch }}
+      - name: FFmpeg di sistema (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+      - name: Test flussi (MP3, playlist PLS/M3U/ASX, HLS, ascolto)
+        if: matrix.test
+        run: npm test
       - run: npx electron-builder ${{ matrix.target }} --${{ matrix.arch }} --publish never
       - name: Verifica app macOS (architettura e firma)
         if: runner.os == 'macOS'
@@ -56,6 +63,20 @@ jobs:
             dist/*.dmg
             dist/*.AppImage
           if-no-files-found: error
+
+  # Test nativi su Mac Apple Silicon (FFmpeg arm64 incluso nell'app). Non blocca la Release:
+  # i runner arm64 di GitHub a volte non sono disponibili.
+  test-apple-silicon:
+    runs-on: macos-15
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
 
   release:
     # pubblica anche se una piattaforma fallisce, con i file disponibili

@@ -176,7 +176,6 @@
     const s = c.stream, el = c.el;
     $('.name', el).textContent = s.name;
     $('.url', el).textContent = s.url;
-    $('.url', el).title = s.url;
     $('.toggle', el).checked = !!s.enabled;
     el.className = 'card st-' + s.state;
     const alarming = s.alarm && !s.alarm.acknowledged;
@@ -189,6 +188,8 @@
     }
     $('.ack', el).classList.toggle('hidden', !alarming);
     $('.err', el).textContent = s.state === 'offair' && s.lastError ? `${t('reason')}: ${s.lastError}` : '';
+    $('.listen-msg', el).textContent = c.listenMsg || '';
+    $('.url', el).title = s.resolvedUrl ? `${s.url}\n→ ${s.resolvedUrl}` : s.url;
     $('.listen', el).textContent = c.audio ? t('stopListen') : t('listen');
     $('.listen', el).classList.toggle('playing', !!c.audio);
     updateStatusText(c);
@@ -365,39 +366,44 @@
   $('#btnClearEvents').addEventListener('click', () => api('DELETE', '/api/events').catch(alertErr));
 
   // ---------- ascolto ----------
-  let hlsLoader = null;
-  function loadHls() {
-    if (!hlsLoader) {
-      hlsLoader = new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
-        s.onload = () => res(window.Hls); s.onerror = rej;
-        document.head.appendChild(s);
-      });
-    }
-    return hlsLoader;
+  // L'audio passa dal motore: FFmpeg legge qualsiasi formato (playlist .pls/.m3u, HLS,
+  // RTMP, RTSP, SRT, web TV...) e lo converte in MP3, riproducibile ovunque.
+  function listenUrl(c) {
+    const q = new URLSearchParams({ t: Date.now() });
+    if (token) q.set('token', token);
+    return `${server}/api/streams/${c.stream.id}/listen?${q}`;
   }
-  async function startListen(c) {
+  function startListen(c) {
     for (const o of cards.values()) if (o !== c && o.audio) stopListen(o);
     const a = new Audio();
     c.audio = a;
-    const url = c.stream.url;
-    if (/\.m3u8(\?|$)/i.test(url) && !a.canPlayType('application/vnd.apple.mpegurl')) {
-      try {
-        const Hls = await loadHls();
-        c.hls = new Hls();
-        c.hls.loadSource(url);
-        c.hls.attachMedia(a);
-      } catch (_) { a.src = url; }
-    } else {
-      a.src = url;
-    }
-    a.play().catch(() => {});
+    c.listenMsg = t('listenLoading');
+    a.addEventListener('playing', () => { c.listenMsg = ''; updateCard(c); });
+    a.addEventListener('waiting', () => { c.listenMsg = t('listenLoading'); updateCard(c); });
+    a.addEventListener('error', async () => {
+      if (c.audio !== a) return;
+      let reason = '';
+      try { reason = (await api('GET', `/api/streams/${c.stream.id}/listen-error`)).error; } catch (_) {}
+      stopListen(c);
+      c.listenMsg = t('listenError') + (reason ? ` — ${reason}` : '');
+      updateCard(c);
+    });
+    a.src = listenUrl(c);
+    a.play().catch(e => {
+      if (c.audio !== a || e.name === 'AbortError') return;
+      stopListen(c);
+      c.listenMsg = `${t('listenError')} — ${e.message}`;
+      updateCard(c);
+    });
     updateCard(c);
   }
   function stopListen(c) {
-    if (c.hls) { c.hls.destroy(); c.hls = null; }
-    if (c.audio) { c.audio.pause(); c.audio.removeAttribute('src'); c.audio.load(); c.audio = null; }
+    if (c.audio) {
+      const a = c.audio;
+      c.audio = null;
+      a.pause(); a.removeAttribute('src'); a.load();
+    }
+    c.listenMsg = '';
     updateCard(c);
   }
 

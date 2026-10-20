@@ -4,6 +4,7 @@
 // e calcola livelli di picco/RMS per canale, rilevando OFF AIR e SILENZIO.
 const { spawn } = require('child_process');
 const { EventEmitter } = require('events');
+const { resolveStreamUrl } = require('./resolve');
 
 const SAMPLE_RATE = 11025;
 const CHANNELS = 2;
@@ -23,8 +24,24 @@ function toDb(x) {
   return Math.max(FLOOR_DB, 20 * Math.log10(x));
 }
 
+function findInPath(name) {
+  const fs = require('fs');
+  const path = require('path');
+  for (const dir of (process.env.PATH || '').split(path.delimiter)) {
+    const f = path.join(dir, name);
+    try { fs.accessSync(f, fs.constants.X_OK); return f; } catch (_) {}
+  }
+  return null;
+}
+
 function resolveFfmpeg() {
   if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+  // Su Linux il binario statico di ffmpeg-static perde la risoluzione DNS (va in crash
+  // con indirizzi come "radio.example.com"): si preferisce FFmpeg di sistema.
+  if (process.platform === 'linux') {
+    const sys = findInPath('ffmpeg');
+    if (sys) return sys;
+  }
   try {
     const p = require('ffmpeg-static');
     if (p) return p.replace('app.asar' + require('path').sep, 'app.asar.unpacked' + require('path').sep);
@@ -33,6 +50,18 @@ function resolveFfmpeg() {
 }
 
 const FFMPEG = resolveFfmpeg();
+
+/** Opzioni di ingresso FFmpeg comuni a monitoraggio e ascolto. */
+function inputArgs(url) {
+  const a = ['-hide_banner', '-nostdin', '-loglevel', 'error'];
+  if (/^https?:/i.test(url)) {
+    a.push('-user_agent', 'MaxTripStreamMonitor/1.0', '-rw_timeout', '15000000');
+  } else if (/^rtsp:/i.test(url)) {
+    a.push('-rtsp_transport', 'tcp', '-timeout', '15000000');
+  }
+  a.push('-i', url);
+  return a;
+}
 
 class StreamMonitor extends EventEmitter {
   /**
@@ -77,6 +106,7 @@ class StreamMonitor extends EventEmitter {
 
   stop() {
     this.running = false;
+    this._gen = (this._gen || 0) + 1;
     clearTimeout(this.restartTimer);
     clearInterval(this.watchdog);
     this._kill();
@@ -90,24 +120,17 @@ class StreamMonitor extends EventEmitter {
     this.start();
   }
 
-  _args() {
-    const url = this.stream.url;
-    const a = ['-hide_banner', '-nostdin', '-loglevel', 'error'];
-    if (/^https?:/i.test(url)) {
-      a.push('-user_agent', 'MaxTripStreamMonitor/1.0', '-rw_timeout', '15000000');
-    } else if (/^rtsp:/i.test(url)) {
-      a.push('-rtsp_transport', 'tcp', '-timeout', '15000000');
-    }
-    a.push('-i', url, '-vn', '-sn', '-dn', '-ac', String(CHANNELS), '-ar', String(SAMPLE_RATE),
-      '-f', 's16le', '-acodec', 'pcm_s16le', 'pipe:1');
-    return a;
-  }
-
-  _spawn() {
+  async _spawn() {
     if (!this.running) return;
+    const gen = this._gen = (this._gen || 0) + 1;
+    // risolve i link playlist (.pls/.m3u/...) a ogni tentativo: alcune radio ruotano i server
+    const { url, playlist } = await resolveStreamUrl(this.stream.url);
+    if (!this.running || gen !== this._gen) return;
+    this.resolvedUrl = playlist ? url : null;
     let proc;
     try {
-      proc = spawn(FFMPEG, this._args(), { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      proc = spawn(FFMPEG, [...inputArgs(url), '-vn', '-sn', '-dn', '-ac', String(CHANNELS), '-ar', String(SAMPLE_RATE),
+        '-f', 's16le', '-acodec', 'pcm_s16le', 'pipe:1'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     } catch (e) {
       this.lastError = e.message;
       return this._scheduleRestart();
@@ -122,7 +145,8 @@ class StreamMonitor extends EventEmitter {
     proc.on('error', e => {
       this.lastError = e.code === 'ENOENT' ? 'FFmpeg non trovato / FFmpeg not found' : e.message;
     });
-    proc.on('close', () => {
+    proc.on('close', (code, signal) => {
+      if (signal === 'SIGSEGV') this.lastError = 'FFmpeg crash (SIGSEGV)' + (process.platform === 'linux' ? ' — sudo apt install ffmpeg' : '');
       if (this.proc === proc) this.proc = null;
       this._scheduleRestart();
     });
@@ -235,10 +259,11 @@ class StreamMonitor extends EventEmitter {
       state: this.state,
       since: this.since,
       lastError: this.lastError,
+      resolvedUrl: this.resolvedUrl || null,
       alarm: this.alarm,
       bytesTotal: this.bytesTotal
     };
   }
 }
 
-module.exports = { StreamMonitor, STATE, FLOOR_DB, FFMPEG };
+module.exports = { StreamMonitor, STATE, FLOOR_DB, FFMPEG, inputArgs };

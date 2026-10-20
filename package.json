@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "server": "node src/server.js",
-    "test": "node test/engine.test.js",
+    "test": "node test/engine.test.js && node test/sources.test.js",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",

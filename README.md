@@ -24,6 +24,12 @@ Monitoraggio professionale di **web radio, web TV e qualsiasi segnale live**.
 Il motore usa FFmpeg, quindi accetta praticamente qualsiasi sorgente:
 Icecast / Shoutcast (MP3, AAC, OGG, Opus), HLS (`.m3u8`), DASH, RTMP, RTSP, SRT, UDP/RTP e flussi video delle web TV (viene analizzato l'audio).
 
+Puoi incollare anche i **link playlist** che le radio pubblicano sui loro siti (`.pls`, `.m3u`, `.asx`, `.xspf`): l'app li risolve automaticamente nel flusso audio. Se manca `http://` viene aggiunto da solo.
+
+Il pulsante **Ascolta** riproduce l'audio passando dal motore (FFmpeg lo converte in MP3), quindi funziona con tutti i formati e su tutti i dispositivi. Se il flusso non è raggiungibile, sotto il riquadro compare la causa (es. "404 Not Found").
+
+**Linux**: installa FFmpeg di sistema (`sudo apt install ffmpeg`). Il binario statico incluso non supporta la risoluzione DNS su Linux.
+
 ### Come funziona
 
 ```

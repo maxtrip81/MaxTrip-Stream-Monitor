@@ -7,7 +7,9 @@ const path = require('path');
 const { EventEmitter } = require('events');
 const { WebSocketServer } = require('ws');
 const { Store } = require('./store');
-const { StreamMonitor, STATE, FFMPEG } = require('./monitor');
+const { spawn } = require('child_process');
+const { StreamMonitor, STATE, FFMPEG, inputArgs } = require('./monitor');
+const { resolveStreamUrl } = require('./resolve');
 const { sendAll } = require('./notifier');
 const { describe } = require('./i18n');
 const pkg = require('../../package.json');
@@ -34,6 +36,7 @@ class Engine extends EventEmitter {
     this.hostOverride = host || process.env.HOST || null;
     this.monitors = new Map();
     this.clients = new Set();
+    this.listenErrors = new Map();
   }
 
   // ---------- flussi ----------
@@ -209,6 +212,43 @@ class Engine extends EventEmitter {
     }, 300);
   }
 
+  /**
+   * Ascolto: FFmpeg legge il flusso (qualsiasi formato, playlist comprese) e lo
+   * converte in MP3, riproducibile da desktop, app mobile e browser.
+   */
+  async _serveListen(req, res, id) {
+    const mon = this.monitors.get(id);
+    if (!mon) return this._json(res, 404, { error: 'not found' });
+    this.listenErrors.delete(id);
+    const { url } = await resolveStreamUrl(mon.stream.url);
+    if (res.destroyed) return;
+    const ff = spawn(FFMPEG, [...inputArgs(url), '-vn', '-sn', '-dn', '-ac', '2', '-ar', '44100',
+      '-c:a', 'libmp3lame', '-b:a', '128k', '-f', 'mp3', 'pipe:1'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    let err = '', started = false;
+    const fail = msg => {
+      this.listenErrors.set(id, msg);
+      if (!res.headersSent) this._json(res, 502, { error: msg });
+      else res.end();
+    };
+    const timer = setTimeout(() => { if (!started) { fail('timeout'); ff.kill('SIGKILL'); } }, 20000);
+    ff.on('error', e => fail(e.code === 'ENOENT' ? 'FFmpeg not found' : e.message));
+    ff.stderr.on('data', d => { err = (err + d).slice(-600); });
+    ff.stdout.on('data', chunk => {
+      if (!started) {
+        started = true;
+        clearTimeout(timer);
+        res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store', ...CORS });
+      }
+      res.write(chunk);
+    });
+    ff.on('close', () => {
+      clearTimeout(timer);
+      if (!started) fail(err.trim().split(/\r?\n/).pop() || 'stream unavailable');
+      else res.end();
+    });
+    res.on('close', () => { clearTimeout(timer); ff.kill('SIGKILL'); });
+  }
+
   _json(res, code, obj) {
     res.writeHead(code, { 'Content-Type': 'application/json', ...CORS });
     res.end(JSON.stringify(obj));
@@ -228,7 +268,7 @@ class Engine extends EventEmitter {
     if (p.startsWith('/api/')) {
       if (p === '/api/info') return this._json(res, 200, ABOUT);
       if (!this._authorized(req, url)) return this._json(res, 401, { error: 'unauthorized' });
-      const m = p.match(/^\/api\/streams\/([\w-]+)(\/ack|\/restart)?$/);
+      const m = p.match(/^\/api\/streams\/([\w-]+)(\/ack|\/restart|\/listen|\/listen-error)?$/);
 
       if (p === '/api/state' && req.method === 'GET') return this._json(res, 200, this.state());
       if (p === '/api/events' && req.method === 'GET') return this._json(res, 200, this.store.events);
@@ -244,6 +284,10 @@ class Engine extends EventEmitter {
       }
       if (p === '/api/ack' && req.method === 'POST') { this.acknowledge(null); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/ack' && req.method === 'POST') { this.acknowledge(m[1]); return this._json(res, 200, { ok: true }); }
+      if (m && m[2] === '/listen' && req.method === 'GET') return this._serveListen(req, res, m[1]);
+      if (m && m[2] === '/listen-error' && req.method === 'GET') {
+        return this._json(res, 200, { error: this.listenErrors.get(m[1]) || '' });
+      }
       if (m && m[2] === '/restart' && req.method === 'POST') {
         const mon = this.monitors.get(m[1]);
         if (mon && mon.stream.enabled) mon.restart();
