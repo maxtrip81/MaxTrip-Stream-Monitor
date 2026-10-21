@@ -169,7 +169,9 @@ function sanitizeStream(s) {
     enabled: s.enabled !== false,
     silenceThresholdDb: numOrNull(s.silenceThresholdDb),
     silenceSeconds: numOrNull(s.silenceSeconds),
-    offAirSeconds: numOrNull(s.offAirSeconds)
+    offAirSeconds: numOrNull(s.offAirSeconds),
+    userAgent: String(s.userAgent || '').trim().slice(0, 300),
+    headers: String(s.headers || '').trim().slice(0, 2000)
   };
 }
 

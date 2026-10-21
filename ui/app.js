@@ -194,10 +194,32 @@
     $('.ack', el).classList.toggle('hidden', !alarming);
     $('.err', el).textContent = s.state === 'offair' && s.lastError ? `${t('reason')}: ${s.lastError}` : '';
     $('.listen-msg', el).textContent = c.listenMsg || '';
+    $('.info', el).textContent = s.state === 'stopped' ? '' : streamInfo(s.info);
+    const img = $('.thumb', el);
+    const showThumb = s.thumbAt && s.state !== 'stopped' && s.state !== 'offair';
+    img.classList.toggle('hidden', !showThumb);
+    if (showThumb && img.dataset.at !== String(s.thumbAt)) {
+      img.dataset.at = String(s.thumbAt);
+      img.src = `${server}/api/streams/${s.id}/thumb?t=${s.thumbAt}${token ? '&token=' + encodeURIComponent(token) : ''}`;
+    }
     $('.url', el).title = s.resolvedUrl ? `${s.url}\n→ ${s.resolvedUrl}` : s.url;
     $('.listen', el).textContent = c.audio ? t('stopListen') : t('listen');
     $('.listen', el).classList.toggle('playing', !!c.audio);
     updateStatusText(c);
+  }
+
+  /** Riga informativa: tipo di sorgente, codec, bitrate, video, nome stazione, brano. */
+  function streamInfo(info) {
+    if (!info) return '';
+    const a = info.audio, v = info.video;
+    const parts = [t('kind_' + String(info.kind || 'direct').replace(/^page→.*/, 'page').replace(/-/g, '_'))];
+    if (a) parts.push([a.codec && a.codec.toUpperCase(), a.bitrate && `${a.bitrate} kbps`, a.rate && `${(a.rate / 1000).toFixed(a.rate % 1000 ? 1 : 0)} kHz`, a.channels].filter(Boolean).join(' '));
+    if (v) parts.push(`${t('video')} ${v.width}×${v.height}${v.fps ? ` ${Math.round(v.fps)}fps` : ''}`);
+    if (info.alternates > 1) parts.push(t('alternates', { n: info.alternates }));
+    let line = parts.filter(Boolean).join(' · ');
+    if (info.name) line = `📻 ${info.name}\n${line}`;
+    if (info.nowPlaying) line += `\n♪ ${info.nowPlaying}`;
+    return line;
   }
 
   function updateStatusText(c) {
@@ -422,7 +444,9 @@
     f.name.value = s ? s.name : '';
     f.url.value = s ? s.url : '';
     f.enabled.checked = s ? s.enabled : true;
-    for (const k of ['silenceThresholdDb', 'silenceSeconds', 'offAirSeconds']) f[k].value = s && s[k] != null ? s[k] : '';
+    for (const k of ['silenceThresholdDb', 'silenceSeconds', 'offAirSeconds', 'userAgent', 'headers']) f[k].value = s && s[k] != null ? s[k] : '';
+    f.querySelector('.advanced').open = !!(s && (s.userAgent || s.headers));
+    f.querySelector('.ytdlp-hint').classList.toggle('hidden', !!(about && about.ytdlp));
     $('#streamDialog').showModal();
   }
   $('#btnAdd').addEventListener('click', () => openStreamDialog(null));
@@ -431,7 +455,8 @@
     const f = e.target;
     const body = {
       name: f.name.value.trim(), url: f.url.value.trim(), enabled: f.enabled.checked,
-      silenceThresholdDb: f.silenceThresholdDb.value, silenceSeconds: f.silenceSeconds.value, offAirSeconds: f.offAirSeconds.value
+      silenceThresholdDb: f.silenceThresholdDb.value, silenceSeconds: f.silenceSeconds.value, offAirSeconds: f.offAirSeconds.value,
+      userAgent: f.userAgent.value.trim(), headers: f.headers.value.trim()
     };
     (editingId ? api('PUT', '/api/streams/' + editingId, body) : api('POST', '/api/streams', body)).catch(alertErr);
   });

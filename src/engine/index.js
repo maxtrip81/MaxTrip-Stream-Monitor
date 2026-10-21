@@ -8,8 +8,8 @@ const { EventEmitter } = require('events');
 const { WebSocketServer } = require('ws');
 const { Store } = require('./store');
 const { spawn } = require('child_process');
-const { StreamMonitor, STATE, FFMPEG, inputArgs } = require('./monitor');
-const { resolveStreamUrl } = require('./resolve');
+const { StreamMonitor, STATE, FFMPEG, inputArgs, streamOptions } = require('./monitor');
+const { resolveStream, findYtDlp } = require('./resolve');
 const { sendAll } = require('./notifier');
 const { describe } = require('./i18n');
 const pkg = require('../../package.json');
@@ -23,6 +23,7 @@ const MIME = {
 
 const ABOUT = {
   app: 'MaxTrip Stream Monitor',
+  get ytdlp() { return !!findYtDlp(); },
   version: pkg.version,
   author: 'Massimiliano Mascioli Trippa',
   email: 'max@maxtrip.it'
@@ -56,6 +57,7 @@ class Engine extends EventEmitter {
     const m = new StreamMonitor(stream, this._options(stream));
     m.on('state', () => this._broadcastStream(m));
     m.on('event', ev => this._onMonitorEvent(m, ev));
+    m.on('info', () => this._broadcastStream(m));
     this.monitors.set(stream.id, m);
     if (stream.enabled && stream.url) m.start();
     return m;
@@ -232,9 +234,19 @@ class Engine extends EventEmitter {
     const mon = this.monitors.get(id);
     if (!mon) return this._json(res, 404, { error: 'not found' });
     this.listenErrors.delete(id);
-    const { url } = await resolveStreamUrl(mon.stream.url);
+    // riusa il link già risolto dal monitor (se recente), altrimenti lo risolve ora
+    let url, opts = streamOptions(mon.stream);
+    if (mon.current && mon.gotData && Date.now() - mon.current.at < 10 * 60000) ({ url, opts } = mon.current);
+    else {
+      const r = await resolveStream(mon.stream.url, opts);
+      if (r.error && (r.kind === 'html' || r.kind === 'site')) {
+        this.listenErrors.set(id, r.error);
+        return this._json(res, 502, { error: r.error });
+      }
+      url = r.url;
+    }
     if (res.destroyed) return;
-    const ff = spawn(FFMPEG, [...inputArgs(url), '-vn', '-sn', '-dn', '-ac', '2', '-ar', '44100',
+    const ff = spawn(FFMPEG, [...inputArgs(url, opts), '-vn', '-sn', '-dn', '-ac', '2', '-ar', '44100',
       '-c:a', 'libmp3lame', '-b:a', '128k', '-f', 'mp3', 'pipe:1'], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     let err = '', started = false;
     const fail = msg => {
@@ -244,7 +256,7 @@ class Engine extends EventEmitter {
     };
     const timer = setTimeout(() => { if (!started) { fail('timeout'); ff.kill('SIGKILL'); } }, 20000);
     ff.on('error', e => fail(e.code === 'ENOENT' ? 'FFmpeg not found' : e.message));
-    ff.stderr.on('data', d => { err = (err + d).slice(-600); });
+    ff.stderr.on('data', d => { err = (err + d).slice(-4000); });
     ff.stdout.on('data', chunk => {
       if (!started) {
         started = true;
@@ -255,7 +267,8 @@ class Engine extends EventEmitter {
     });
     ff.on('close', () => {
       clearTimeout(timer);
-      if (!started) fail(err.trim().split(/\r?\n/).pop() || 'stream unavailable');
+      const errLine = err.split(/\r?\n/).filter(l => /\[(error|fatal)\]/.test(l)).pop();
+      if (!started) fail((errLine || err.trim().split(/\r?\n/).pop() || 'stream unavailable').replace(/^.*\[(error|fatal)\]\s*/, ''));
       else res.end();
     });
     res.on('close', () => { clearTimeout(timer); ff.kill('SIGKILL'); });
@@ -280,7 +293,7 @@ class Engine extends EventEmitter {
     if (p.startsWith('/api/')) {
       if (p === '/api/info') return this._json(res, 200, ABOUT);
       if (!this._authorized(req, url)) return this._json(res, 401, { error: 'unauthorized' });
-      const m = p.match(/^\/api\/streams\/([\w-]+)(\/ack|\/restart|\/listen|\/listen-error)?$/);
+      const m = p.match(/^\/api\/streams\/([\w-]+)(\/ack|\/restart|\/listen|\/listen-error|\/thumb)?$/);
 
       if (p === '/api/state' && req.method === 'GET') return this._json(res, 200, this.state());
       if (p === '/api/events' && req.method === 'GET') return this._json(res, 200, this.store.events);
@@ -309,6 +322,12 @@ class Engine extends EventEmitter {
       if (p === '/api/ack' && req.method === 'POST') { this.acknowledge(null); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/ack' && req.method === 'POST') { this.acknowledge(m[1]); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/listen' && req.method === 'GET') return this._serveListen(req, res, m[1]);
+      if (m && m[2] === '/thumb' && req.method === 'GET') {
+        const mon = this.monitors.get(m[1]);
+        if (!mon || !mon.thumb) { res.writeHead(404, CORS); return res.end(); }
+        res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store', ...CORS });
+        return res.end(mon.thumb);
+      }
       if (m && m[2] === '/listen-error' && req.method === 'GET') {
         return this._json(res, 200, { error: this.listenErrors.get(m[1]) || '' });
       }

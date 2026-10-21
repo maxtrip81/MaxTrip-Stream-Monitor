@@ -182,3 +182,10 @@ details details { margin-left: 4px; }
 .devices li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .devices li.me span::after { content: " ★"; color: var(--accent); }
 #testResult { display: block; margin-top: 6px; white-space: pre-line; }
+
+.card .info { margin: 0; color: var(--muted); font-size: 12px; white-space: pre-line; overflow-wrap: anywhere; }
+.card .info:empty { display: none; }
+.card .thumb { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: #000; display: block; }
+details.advanced { margin-bottom: 10px; }
+details.advanced summary { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.ytdlp-hint { display: block; margin-top: 2px; }

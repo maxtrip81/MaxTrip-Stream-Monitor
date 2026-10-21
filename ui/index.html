@@ -65,7 +65,7 @@
     <form method="dialog" id="streamForm">
       <h2 id="streamDialogTitle"></h2>
       <label><span data-i18n="streamName"></span><input name="name" required maxlength="120" placeholder="Radio …"></label>
-      <label><span data-i18n="streamUrl"></span><input name="url" required placeholder="https://…/stream.mp3"><small data-i18n="urlHint"></small></label>
+      <label><span data-i18n="streamUrl"></span><input name="url" required placeholder="https://…/stream.mp3"><small data-i18n="urlHint"></small><small class="ytdlp-hint hidden" data-i18n="ytdlpHint"></small></label>
       <label class="check"><input type="checkbox" name="enabled" checked> <span data-i18n="enable"></span></label>
       <fieldset>
         <legend data-i18n="overrides"></legend>
@@ -75,6 +75,11 @@
           <label><span data-i18n="offAirSeconds"></span><input name="offAirSeconds" type="number" step="1" min="2"></label>
         </div>
       </fieldset>
+      <details class="advanced">
+        <summary data-i18n="advanced"></summary>
+        <label>User-Agent<input name="userAgent" placeholder="VLC/3.0.21 LibVLC/3.0.21" autocomplete="off"></label>
+        <label><span data-i18n="httpHeaders"></span><textarea name="headers" rows="3" spellcheck="false" placeholder="Referer: https://www.sito-tv.it/&#10;Origin: https://www.sito-tv.it"></textarea><small data-i18n="headersHint"></small></label>
+      </details>
       <div class="dlg-actions">
         <button class="btn" value="cancel" formnovalidate data-i18n="cancel"></button>
         <button class="btn primary" value="ok" data-i18n="save"></button>
@@ -248,7 +253,9 @@
         <span class="led silence"><i></i><b data-i18n="silence"></b></span>
         <span class="led offair"><i></i><b data-i18n="offair"></b></span>
       </div>
+      <img class="thumb hidden" alt="">
       <canvas class="vu" height="64"></canvas>
+      <p class="info"></p>
       <div class="status-line"><span class="status"></span><span class="db"></span></div>
       <p class="err"></p>
       <p class="listen-msg"></p>

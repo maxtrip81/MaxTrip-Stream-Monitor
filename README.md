@@ -19,16 +19,26 @@ Monitoraggio professionale di **web radio, web TV e qualsiasi segnale live**.
 - **Bilingue**: italiano (predefinito) e inglese, anche nei testi delle notifiche.
 - Registro eventi con data e ora.
 
-### Formati supportati
+### Formati e link supportati
 
-Il motore usa FFmpeg, quindi accetta praticamente qualsiasi sorgente:
-Icecast / Shoutcast (MP3, AAC, OGG, Opus), HLS (`.m3u8`), DASH, RTMP, RTSP, SRT, UDP/RTP e flussi video delle web TV (viene analizzato l'audio).
+Puoi inserire **qualsiasi tipo di link**: l'app riconosce da sola il tipo di sorgente e trova il flusso audio/video.
 
-Puoi incollare anche i **link playlist** che le radio pubblicano sui loro siti (`.pls`, `.m3u`, `.asx`, `.xspf`): l'app li risolve automaticamente nel flusso audio. Se manca `http://` viene aggiunto da solo.
+| Tipo di link | Esempi | Cosa fa l'app |
+|---|---|---|
+| **Icecast 2.x** (2.4 compreso) | `http://server:8000/live.mp3` · `http://server:8000` | mountpoint diretto; con il solo indirizzo del server legge `status-json.xsl` e usa il mountpoint principale |
+| **Shoutcast v1** | `http://server:8000` · `http://server:8000/;` | gestisce la risposta non standard `ICY 200 OK`; dalla pagina di stato passa a `/;` |
+| **Shoutcast v2** | `http://server:8000` · `/stream` · `/listen.pls?sid=1` | con il solo indirizzo legge `statistics?json=1` |
+| **Playlist** | `.pls` `.m3u` `.asx` `.wax` `.wvx` `.xspf` `.strm` | apre la playlist; se contiene più server e il primo non risponde passa al successivo |
+| **HLS** (web TV, radio) | `.m3u8` | nelle playlist "master" sceglie la traccia solo audio o la qualità più leggera |
+| **Pagina web** della radio/TV | `https://www.radio.it/ascolta` | cerca il player nel codice della pagina (`<audio>`, `<video>`, link `.m3u8`, `.pls`, mountpoint…) |
+| **YouTube, Twitch, Facebook, TuneIn, RaiPlay…** | link alla diretta | tramite [yt-dlp](https://github.com/yt-dlp/yt-dlp), se installato sul computer del motore |
+| **Altri protocolli** | `rtmp://` `rtmps://` `rtsp://` `srt://` `udp://` `rtp://` `rist://` `mms://` `icy://` · DASH `.mpd` | passati direttamente a FFmpeg |
 
-Il pulsante **Ascolta** riproduce l'audio passando dal motore (FFmpeg lo converte in MP3), quindi funziona con tutti i formati e su tutti i dispositivi. Se il flusso non è raggiungibile, sotto il riquadro compare la causa (es. "404 Not Found").
-
-**Linux**: installa FFmpeg di sistema (`sudo apt install ffmpeg`). Il binario statico incluso non supporta la risoluzione DNS su Linux.
+Inoltre:
+- Funzionano HTTPS con certificati scaduti o autofirmati, i redirect, i link senza `http://` e le credenziali nel link (`http://utente:password@server/…`).
+- Per le web TV protette, nelle *Opzioni avanzate* del flusso puoi impostare User-Agent e intestazioni HTTP (es. `Referer`).
+- Per ogni flusso vengono mostrati tipo di sorgente, codec, bitrate, frequenza, canali, nome della stazione, brano in onda e, per le web TV, risoluzione e anteprima dell'immagine (aggiornata ogni minuto).
+- Un mountpoint Icecast spento (404) resta **OFF AIR**: l'app non lo sostituisce mai con un altro mountpoint, così l'allarme non viene nascosto.
 
 ### Come funziona
 
@@ -141,7 +151,8 @@ Al primo avvio da remoto imposta un token: le connessioni non locali senza token
 ### Test
 
 ```bash
-npm test   # stati ON AIR → SILENZIO → OFF AIR → RIPRESA, tipi di link (MP3, playlist, HLS), ascolto,
+npm test   # stati ON AIR → SILENZIO → OFF AIR → RIPRESA; server simulati Icecast 2.4, Shoutcast v1/v2,
+           # pagine web, playlist con server di riserva, HLS (anche protetto), HTTPS, RTMP, SRT, UDP; ascolto;
            # e tutti i canali di notifica (push Android/iPhone, email, SMS, Discord, Slack…) su server simulati
 ```
 
@@ -162,7 +173,7 @@ Professional monitoring of **web radio, web TV and any live signal**.
 
 ### Supported sources
 
-The engine uses FFmpeg: Icecast / Shoutcast (MP3, AAC, OGG, Opus), HLS (`.m3u8`), DASH, RTMP, RTSP, SRT, UDP/RTP and web TV video streams (the audio track is analysed).
+Any link works: **Icecast 2.x** (mountpoint or just `server:port`, via `status-json.xsl`), **Shoutcast v1** (`ICY 200 OK`, `/;`), **Shoutcast v2** (`statistics?json=1`, `listen.pls`), playlists (`.pls .m3u .asx .wax .wvx .xspf .strm`, with fallback servers), **HLS** (lightest rendition or audio-only track), **radio/TV web pages** (the stream is found in the page code), YouTube/Twitch/Facebook/TuneIn/RaiPlay via optional [yt-dlp](https://github.com/yt-dlp/yt-dlp), and `rtmp(s)`, `rtsp`, `srt`, `udp`, `rtp`, `rist`, `mms`, `icy`, DASH. Self-signed HTTPS, redirects and custom HTTP headers (Referer, User-Agent) are supported. Each card shows codec, bitrate, station name, now playing and, for web TV, resolution and a video preview.
 
 ### Architecture
 
