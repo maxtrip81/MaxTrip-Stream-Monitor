@@ -56,7 +56,7 @@ h1 { font-size: 18px; margin: 0; }
 .btn.icon { padding: 7px 11px; }
 .btn.small.icon { padding: 5px 9px; }
 .btn.danger:hover { border-color: var(--red); }
-select, input {
+select, input, textarea {
   background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px 10px; font: inherit; width: 100%;
 }
@@ -173,3 +173,12 @@ summary { cursor: pointer; }
   .row2, .row3 { grid-template-columns: 1fr; }
   main { padding: 12px; }
 }
+
+textarea { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: vertical; }
+details details { margin-left: 4px; }
+.sub-summary { font-size: 13px; color: var(--muted); }
+.devices { list-style: none; margin: 6px 0; padding: 0; }
+.devices li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px dashed var(--border); font-size: 13px; }
+.devices li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.devices li.me span::after { content: " ★"; color: var(--accent); }
+#testResult { display: block; margin-top: 6px; white-space: pre-line; }

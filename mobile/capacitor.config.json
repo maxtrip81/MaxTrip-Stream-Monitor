@@ -2,11 +2,21 @@
   "appId": "it.maxtrip.streammonitor",
   "appName": "Stream Monitor",
   "webDir": "www",
+  "backgroundColor": "#0d1117",
   "server": {
     "androidScheme": "http",
     "cleartext": true
   },
+  "android": {
+    "allowMixedContent": true
+  },
+  "ios": {
+    "contentInset": "never"
+  },
   "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
     "LocalNotifications": {
       "iconColor": "#2ecc71"
     }

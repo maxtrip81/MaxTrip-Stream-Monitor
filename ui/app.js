@@ -24,6 +24,7 @@
   let retryTimer = null;
   const cards = new Map();    // id -> { stream, el, lv, disp }
   let events = [];
+  let devices = [];
 
   // ---------- i18n ----------
   function t(key, vars) {
@@ -46,6 +47,7 @@
     for (const c of cards.values()) updateCard(c);
     renderEvents(); renderSummary();
     if (persist && settings) api('PUT', '/api/settings', { language: lang }).catch(() => {});
+    if (NATIVE) mobile.registerDevice();
   }
 
   // ---------- API ----------
@@ -118,6 +120,9 @@
   function onState(st) {
     about = st.about;
     settings = st.settings;
+    devices = st.devices || [];
+    if ($('#settingsDialog').open) renderDevices();
+    if (NATIVE) mobile.onConnected();
     if (settings.language && settings.language !== lang) setLang(settings.language, false);
     const ids = new Set(st.streams.map(s => s.id));
     for (const [id, c] of cards) if (!ids.has(id)) { stopListen(c); c.el.remove(); cards.delete(id); }
@@ -153,7 +158,7 @@
     events.unshift(ev);
     if (events.length > 300) events.length = 300;
     renderEvents();
-    if (!ELECTRON && settings && settings.notify.desktop) localNotify(ev);
+    if (NATIVE ? mobile.pushState !== 'on' : !ELECTRON && settings && settings.notify.desktop) localNotify(ev);
   }
 
   // ---------- card ----------
@@ -326,7 +331,7 @@
     try {
       const LN = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications;
       if (LN) {
-        await LN.schedule({ notifications: [{ id: Math.floor(Math.random() * 2e9), title, body }] });
+        await LN.schedule({ notifications: [{ id: Math.floor(Math.random() * 2e9), title, body, extra: { streamId: ev.streamId } }] });
       } else if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(title, { body, icon: 'icon.png', tag: ev.streamId + ev.type });
       }
@@ -452,7 +457,28 @@
     const port = (() => { try { return new URL(server).port || '8686'; } catch (_) { return '8686'; } })();
     $('#remoteHint').textContent = t('remoteHint', { port });
     $('#testResult').textContent = '';
+    renderDevices();
     $('#settingsDialog').showModal();
+  }
+  function renderDevices() {
+    const ul = $('#devicesList');
+    ul.innerHTML = '';
+    if (!devices.length) { ul.innerHTML = `<li><span>${t('noDevices')}</span></li>`; }
+    const locale = lang === 'en' ? 'en-GB' : 'it-IT';
+    for (const d of devices) {
+      const li = document.createElement('li');
+      li.classList.toggle('me', !!(mobile.token && mobile.token.endsWith(d.tokenTail)));
+      const sp = document.createElement('span');
+      sp.textContent = `${d.platform === 'ios' ? '🍏' : '🤖'} ${d.name || d.platform} · ${d.lang.toUpperCase()} · ${new Date(d.lastSeen).toLocaleDateString(locale)}`;
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn small danger'; b.textContent = t('removeDevice');
+      b.addEventListener('click', () => api('DELETE', '/api/devices/' + d.id).catch(alertErr));
+      li.append(sp, b);
+      ul.appendChild(li);
+    }
+    const me = $('#thisDevice');
+    me.textContent = !NATIVE ? '' : mobile.pushState === 'on' ? t('thisDeviceOn')
+      : mobile.pushState === 'denied' ? t('thisDeviceOff') : mobile.pushState === 'nopush' ? t('thisDeviceNoPush') : '';
   }
   function isLocalHost() { return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname); }
   function collectSettings() {
@@ -476,10 +502,10 @@
     try {
       await api('PUT', '/api/settings', collectSettings());
       const { results } = await api('POST', '/api/test-notify');
-      const bad = results.filter(r => !r.ok);
-      out.textContent = !results.length ? t('testNone')
-        : bad.length ? t('testFailed', { e: bad.map(b => `${b.channel}: ${b.error}`).join('; ') }) : t('testSent');
-      if (!ELECTRON) localNotify({ title: '✅ MaxTrip Stream Monitor', message: t('testSent'), streamId: 'test', type: 'test' });
+      out.textContent = !results.length ? t('testNone') : results.map(r => r.ok
+        ? `✅ ${r.channel}: ${t('testSent')}${r.info ? ` (${r.info})` : ''}`
+        : `❌ ${r.channel}: ${r.error}`).join('\n');
+      if (!ELECTRON && !(NATIVE && mobile.pushState === 'on')) localNotify({ title: '✅ MaxTrip Stream Monitor', message: t('testSent'), streamId: 'test', type: 'test' });
     } catch (e) { out.textContent = t('testFailed', { e: e.message }); }
   });
   $('#settingsForm').addEventListener('submit', async e => {
@@ -510,6 +536,84 @@
   function alertErr(e) { alert(e.message || e); }
 
   if (location.search.includes('token=') && !NATIVE) ls.set('token', token);
+  // ---------- app per smartphone (Capacitor: iOS / Android) ----------
+  const mobile = {
+    token: ls.get('pushToken'),
+    pushState: 'unknown',   // on | denied | nopush | error | unknown
+    started: false,
+    plugins: (window.Capacitor && window.Capacitor.Plugins) || {},
+    platform: NATIVE ? window.Capacitor.getPlatform() : 'web',
+    deviceName: '',
+
+    async onConnected() {
+      this.registerDevice();
+      if (this.started) return;
+      this.started = true;
+      const { Device } = this.plugins;
+      try { const i = await Device.getInfo(); this.deviceName = [i.manufacturer, i.name || i.model].filter(Boolean).join(' '); } catch (_) {}
+      this.setupPush();
+    },
+
+    async setupPush() {
+      const PN = this.plugins.PushNotifications;
+      const build = window.SM_BUILD || {};
+      if (!PN || build[this.platform] === false) { this.pushState = 'nopush'; return; }
+      try {
+        if (this.platform === 'android') {
+          await PN.createChannel({ id: 'alarms', name: lang === 'en' ? 'Alarms (OFF AIR, silence)' : 'Allarmi (OFF AIR, silenzio)', importance: 5, visibility: 1, vibration: true, lights: true, lightColor: '#FF3B30' });
+          await PN.createChannel({ id: 'events', name: lang === 'en' ? 'Recovery and tests' : 'Ripresa e test', importance: 3, visibility: 1 });
+        }
+        let perm = await PN.checkPermissions();
+        if (perm.receive !== 'granted') perm = await PN.requestPermissions();
+        if (perm.receive !== 'granted') { this.pushState = 'denied'; return; }
+        await PN.addListener('registration', ({ value }) => {
+          this.token = value; ls.set('pushToken', value);
+          this.pushState = 'on';
+          this.registerDevice();
+        });
+        await PN.addListener('registrationError', e => { this.pushState = 'error'; console.warn('push', e); });
+        await PN.addListener('pushNotificationActionPerformed', a => focusStream(a.notification && a.notification.data && a.notification.data.streamId));
+        await PN.register();
+      } catch (e) {
+        this.pushState = 'error';
+        console.warn('push', e);
+      }
+    },
+
+    registerDevice() {
+      if (!this.token || !settings) return;
+      api('POST', '/api/devices', { token: this.token, platform: this.platform, name: this.deviceName, lang })
+        .then(() => { this.pushState = 'on'; }).catch(() => {});
+    }
+  };
+
+  function focusStream(id) {
+    const c = id && cards.get(id);
+    if (!c) return;
+    c.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    c.el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.03)' }, { transform: 'scale(1)' }], { duration: 600, iterations: 2 });
+  }
+
+  if (NATIVE) {
+    const { App, LocalNotifications } = mobile.plugins;
+    if (App) {
+      // al ritorno in primo piano la connessione (sospesa dal sistema) viene ripristinata subito
+      App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive && (!ws || ws.readyState > 1)) connect();
+      });
+      App.addListener('backButton', () => {
+        const open = document.querySelector('dialog[open]');
+        if (open && open.id !== 'connectDialog') open.close();
+        else if (!$('#eventsDrawer').classList.contains('hidden')) $('#eventsDrawer').classList.add('hidden');
+        else App.minimizeApp();
+      });
+    }
+    if (LocalNotifications) {
+      LocalNotifications.addListener('localNotificationActionPerformed', a => focusStream(a.notification.extra && a.notification.extra.streamId));
+    }
+    document.documentElement.classList.add('native', 'platform-' + mobile.platform);
+  }
+
   applyI18n();
   renderEvents();
   connect();

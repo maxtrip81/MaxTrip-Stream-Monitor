@@ -16,7 +16,7 @@ function source(expr) {
 
 (async () => {
   let src = source('if(lt(t,4),0.5*sin(2*PI*440*t),0)');
-  await new Promise(r => setTimeout(r, 800));
+  await new Promise(r => setTimeout(r, 2500)); // tempo per avviare la sorgente di prova
   const m = new StreamMonitor({ id: 't', name: 'Test', url: URL },
     () => ({ silenceThresholdDb: -50, silenceSeconds: 3, offAirSeconds: 4, recoverSeconds: 2 }));
   const events = [];

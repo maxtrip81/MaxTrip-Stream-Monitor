@@ -83,11 +83,21 @@ class Engine extends EventEmitter {
     this.emit('alarm', full);
     const st = this.store.settings;
     if (ev.type !== 'recovered' || st.notifyOnRecovery) {
-      sendAll(full, st).then(r => {
+      sendAll(full, st, this._notifyCtx()).then(r => {
         const failed = r.filter(x => !x.ok);
         if (failed.length) console.warn('[notify]', JSON.stringify(failed));
       });
     }
+  }
+
+  _notifyCtx() {
+    return {
+      devices: this.store.devices,
+      onInvalidDevices: tokens => {
+        // token non più validi (app disinstallata, permessi revocati): vengono rimossi
+        if (this.store.removeDevices(d => tokens.includes(d.token))) this._broadcastState();
+      }
+    };
   }
 
   start() {
@@ -136,6 +146,8 @@ class Engine extends EventEmitter {
     return {
       about: ABOUT,
       settings: this.store.settings,
+      devices: this.store.devices.map(({ id, platform, name, lang, addedAt, lastSeen, token }) =>
+        ({ id, platform, name, lang, addedAt, lastSeen, tokenTail: token.slice(-12) })),
       streams: this.store.streams.map(s => {
         const m = this.monitors.get(s.id);
         return m ? m.snapshot() : { ...s, state: STATE.STOPPED };
@@ -282,6 +294,18 @@ class Engine extends EventEmitter {
         if (!b.url) return this._json(res, 400, { error: 'url required' });
         return this._json(res, 201, this.addStream(b));
       }
+      if (p === '/api/devices' && req.method === 'POST') {
+        const d = this.store.registerDevice(await this._body(req));
+        if (!d) return this._json(res, 400, { error: 'token/platform required' });
+        this._broadcastState();
+        return this._json(res, 200, { id: d.id });
+      }
+      const dm = p.match(/^\/api\/devices\/([\w-]+)$/);
+      if (dm && req.method === 'DELETE') {
+        const n = this.store.removeDevices(d => d.id === dm[1]);
+        this._broadcastState();
+        return this._json(res, n ? 200 : 404, { ok: !!n });
+      }
       if (p === '/api/ack' && req.method === 'POST') { this.acknowledge(null); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/ack' && req.method === 'POST') { this.acknowledge(m[1]); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/listen' && req.method === 'GET') return this._serveListen(req, res, m[1]);
@@ -311,7 +335,7 @@ class Engine extends EventEmitter {
         return;
       }
       if (p === '/api/test-notify' && req.method === 'POST') {
-        const results = await sendAll({ type: 'test', name: ABOUT.app, time: Date.now() }, this.store.settings);
+        const results = await sendAll({ type: 'test', name: ABOUT.app, time: Date.now() }, this.store.settings, this._notifyCtx());
         this.emit('alarm', { type: 'test', ...describe({ type: 'test' }, this.store.settings.language) });
         return this._json(res, 200, { results });
       }

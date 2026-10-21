@@ -47,16 +47,18 @@ Il pulsante **Ascolta** riproduce l'audio passando dal motore (FFmpeg lo convert
   iOS e Android sospendono le app in background, quindi un telefono non può garantire un monitoraggio 24/7: per questo l'analisi viene sempre eseguita dal motore, che invia le notifiche push anche ad app chiusa.
 - **Server 24/7** (opzionale): lo stesso motore gira senza interfaccia su un server, NAS o Raspberry Pi (Docker).
 
-### Notifiche push
+### Notifiche (push, email, SMS e altri sistemi)
 
-Imposta i canali in **Impostazioni → Notifiche push**:
+Imposta i canali in **Impostazioni → Notifiche**. Ogni anomalia (OFF AIR, silenzio) e ogni ripresa viene inviata su tutti i canali attivi, con il nome del flusso e il dettaglio dell'errore.
 
 | Canale | Configurazione |
 |---|---|
-| **ntfy** (consigliato, gratuito) | Installa l'app *ntfy* su iPhone/Android/desktop, iscriviti a un topic (nome univoco), inserisci lo stesso topic nelle impostazioni. |
+| **App per smartphone** (iPhone / Android) | Notifiche push native, anche ad app chiusa, nella lingua scelta su ogni telefono. Vedi la [guida dell'app mobile](mobile/README.md). |
+| **Email** | Server SMTP (Gmail, Outlook/Microsoft 365, Aruba, qualsiasi provider), più destinatari separati da virgola. |
+| **SMS / WhatsApp** | Tramite un account Twilio (a pagamento per messaggio). Per WhatsApp usa un mittente `whatsapp:+…`. |
+| **ntfy** (gratuito) | Installa l'app *ntfy* su iPhone/Android/desktop, iscriviti a un topic (nome univoco), inserisci lo stesso topic nelle impostazioni. |
 | **Telegram** | Crea un bot con @BotFather, inserisci il bot token e il tuo chat ID. |
-| **Pushover** | User key + application token. |
-| **Webhook** | URL che riceve un POST JSON con tutti i dettagli dell'evento. |
+| **Discord / Slack** | URL del webhook del canale. |
 | **Notifiche di sistema** | Notifiche native di Windows/macOS e notifiche locali dell'app mobile. |
 
 Usa **"Invia notifica di prova"** per verificare la configurazione.
@@ -114,25 +116,9 @@ Se macOS dice che l'app "è danneggiata", apri il Terminale ed esegui:
 
 Per distribuire su macOS senza avvisi serve la firma con un Apple Developer ID (99 $/anno) e la notarizzazione.
 
-**Mobile (iOS / Android)** — cartella `mobile/`, basata su Capacitor
-
-```bash
-cd mobile
-npm install
-npm run add:android   # una sola volta
-npm run add:ios       # una sola volta (richiede macOS + Xcode)
-npm run android       # apre Android Studio → Run / Build APK-AAB
-npm run ios           # apre Xcode → Run / Archive
-```
-
-Su iOS, per collegarsi al motore in rete locale tramite `http://`, aggiungi a `ios/App/App/Info.plist`:
-
-```xml
-<key>NSAppTransportSecurity</key>
-<dict><key>NSAllowsArbitraryLoads</key><true/></dict>
-<key>NSLocalNetworkUsageDescription</key>
-<string>Connessione al monitor dei flussi in rete locale</string>
-```
+**App per smartphone (iOS / Android)** — cartella `mobile/`, basata su Capacitor.
+Installazione, notifiche push (Firebase / Apple) e pubblicazione sugli store sono spiegate nella **[guida dell'app mobile](mobile/README.md)**.
+A ogni compilazione GitHub crea l'APK Android installabile e verifica che l'app iOS compili.
 
 **Collegare l'app mobile**
 
@@ -155,7 +141,8 @@ Al primo avvio da remoto imposta un token: le connessioni non locali senza token
 ### Test
 
 ```bash
-npm test   # crea un flusso di prova locale e verifica ON AIR → SILENZIO → OFF AIR → RIPRESA
+npm test   # stati ON AIR → SILENZIO → OFF AIR → RIPRESA, tipi di link (MP3, playlist, HLS), ascolto,
+           # e tutti i canali di notifica (push Android/iPhone, email, SMS, Discord, Slack…) su server simulati
 ```
 
 ---
@@ -186,15 +173,15 @@ The engine uses FFmpeg: Icecast / Shoutcast (MP3, AAC, OGG, Opus), HLS (`.m3u8`)
 
 ### Push notifications
 
-Configure them in **Settings → Push notifications**: ntfy (recommended, free apps for iOS/Android/desktop), Telegram, Pushover, generic JSON webhook, plus native desktop / mobile notifications. Use **"Send test notification"** to check your setup.
+Configure them in **Settings → Notifications**: native push to the **smartphone app** (iPhone / Android, see the [mobile app guide](mobile/README.md)), **email** (any SMTP server), **SMS / WhatsApp** (Twilio), ntfy, Telegram, Pushover, Discord, Slack, generic JSON webhook, plus desktop notifications. Use **"Send test notification"** to check every channel.
 
 ### Build
 
 ```bash
 npm install && npm start          # desktop app
 npm run dist:win / dist:mac       # installers (build each on its own OS, or use the GitHub Actions workflow)
-cd mobile && npm install && npm run add:android && npm run android   # Android
-cd mobile && npm install && npm run add:ios && npm run ios           # iOS (macOS + Xcode)
+cd mobile && npm install && npm run android   # Android (Android Studio)
+cd mobile && npm install && npm run ios       # iOS (macOS + Xcode)
 docker build -t maxtrip-stream-monitor . && docker run -d -p 8686:8686 -v sm-data:/data maxtrip-stream-monitor
 ```
 
@@ -202,7 +189,7 @@ Downloads: `…-win-x64.exe` (Windows), `…-mac-arm64.dmg` (Apple Silicon Macs:
 On first launch on macOS, open *System Settings → Privacy & Security* and click **Open Anyway** (the app is ad-hoc signed, not signed with an Apple Developer ID). If macOS reports the app as "damaged", run `xattr -cr "/Applications/MaxTrip Stream Monitor.app"`.
 
 To connect the mobile app: in the desktop app enable *Settings → Remote access*, generate a token, then enter `http://COMPUTER-IP:8686` and the token on the phone.
-For iOS add the `NSAppTransportSecurity` / `NSLocalNetworkUsageDescription` keys shown above to `Info.plist`.
+See the [mobile app guide](mobile/README.md) for installation, push notifications and store publishing.
 
 ---
 

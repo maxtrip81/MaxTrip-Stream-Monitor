@@ -108,6 +108,50 @@
           <legend data-i18n="push"></legend>
           <label class="check"><input type="checkbox" name="notify.desktop"> <span data-i18n="desktopNotify"></span></label>
           <details open>
+            <summary><label class="check inline"><input type="checkbox" name="notify.mobile.enabled"> <span data-i18n="mobileApp"></span></label></summary>
+            <p class="hint" data-i18n="mobileHint"></p>
+            <div id="thisDevice" class="hint"></div>
+            <ul class="devices" id="devicesList"></ul>
+            <details>
+              <summary class="sub-summary">Android — Firebase Cloud Messaging</summary>
+              <p class="hint" data-i18n="fcmHint"></p>
+              <label><span data-i18n="fcmJson"></span><textarea name="notify.mobile.fcm.serviceAccount" rows="3" spellcheck="false" placeholder='{"type": "service_account", "project_id": "…", …}'></textarea></label>
+            </details>
+            <details>
+              <summary class="sub-summary">iPhone — Apple Push Notification service</summary>
+              <p class="hint" data-i18n="apnsHint"></p>
+              <div class="row2">
+                <label>Key ID<input name="notify.mobile.apns.keyId" autocomplete="off"></label>
+                <label>Team ID<input name="notify.mobile.apns.teamId" autocomplete="off"></label>
+              </div>
+              <label>Bundle ID<input name="notify.mobile.apns.bundleId" placeholder="it.maxtrip.streammonitor"></label>
+              <label><span data-i18n="apnsKey"></span><textarea name="notify.mobile.apns.privateKey" rows="3" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----"></textarea></label>
+              <label class="check"><input type="checkbox" name="notify.mobile.apns.production"> <span data-i18n="apnsProd"></span></label>
+            </details>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.email.enabled"> Email</label></summary>
+            <div class="row2">
+              <label><span data-i18n="smtpHost"></span><input name="notify.email.host" placeholder="smtp.gmail.com"></label>
+              <label><span data-i18n="smtpPort"></span><input name="notify.email.port" type="number" placeholder="587"></label>
+              <label><span data-i18n="smtpUser"></span><input name="notify.email.user" autocomplete="off"></label>
+              <label>Password<input name="notify.email.pass" type="password" autocomplete="off"></label>
+            </div>
+            <label><span data-i18n="mailFrom"></span><input name="notify.email.from" placeholder="monitor@maxtrip.it"></label>
+            <label><span data-i18n="mailTo"></span><input name="notify.email.to" placeholder="max@maxtrip.it, regia@…"></label>
+            <p class="hint" data-i18n="mailHint"></p>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.twilio.enabled"> SMS / WhatsApp (Twilio)</label></summary>
+            <div class="row2">
+              <label>Account SID<input name="notify.twilio.accountSid" autocomplete="off"></label>
+              <label>Auth token<input name="notify.twilio.authToken" type="password" autocomplete="off"></label>
+            </div>
+            <label><span data-i18n="smsFrom"></span><input name="notify.twilio.from" placeholder="+1555… / whatsapp:+1415…"></label>
+            <label><span data-i18n="smsTo"></span><input name="notify.twilio.to" placeholder="+39333…, +39347…"></label>
+            <p class="hint" data-i18n="smsHint"></p>
+          </details>
+          <details>
             <summary><label class="check inline"><input type="checkbox" name="notify.ntfy.enabled"> ntfy</label></summary>
             <p class="hint" data-i18n="ntfyHint"></p>
             <label><span data-i18n="ntfyServer"></span><input name="notify.ntfy.server" placeholder="https://ntfy.sh"></label>
@@ -123,6 +167,14 @@
             <summary><label class="check inline"><input type="checkbox" name="notify.pushover.enabled"> Pushover</label></summary>
             <label><span data-i18n="poUser"></span><input name="notify.pushover.userKey" type="password" autocomplete="off"></label>
             <label><span data-i18n="poApp"></span><input name="notify.pushover.appToken" type="password" autocomplete="off"></label>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.discord.enabled"> Discord</label></summary>
+            <label><span data-i18n="webhookUrl"></span><input name="notify.discord.url" placeholder="https://discord.com/api/webhooks/…"></label>
+          </details>
+          <details>
+            <summary><label class="check inline"><input type="checkbox" name="notify.slack.enabled"> Slack</label></summary>
+            <label><span data-i18n="webhookUrl"></span><input name="notify.slack.url" placeholder="https://hooks.slack.com/services/…"></label>
           </details>
           <details>
             <summary><label class="check inline"><input type="checkbox" name="notify.webhook.enabled"> Webhook</label></summary>
@@ -210,6 +262,7 @@
     </article>
   </template>
 
+  <script src="build-config.js"></script>
   <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>

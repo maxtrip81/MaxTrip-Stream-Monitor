@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Stream Monitor</string>
+    <string name="title_activity_main">Stream Monitor</string>
+    <string name="package_name">it.maxtrip.streammonitor</string>
+    <string name="custom_url_scheme">it.maxtrip.streammonitor</string>
+</resources>

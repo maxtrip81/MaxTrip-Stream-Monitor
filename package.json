@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "server": "node src/server.js",
-    "test": "node test/engine.test.js && node test/sources.test.js",
+    "test": "node test/engine.test.js && node test/sources.test.js && node test/notify.test.js",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
@@ -20,11 +20,13 @@
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
+    "nodemailer": "^10.1.7",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "smtp-server": "^3.20.2"
   },
   "build": {
     "appId": "it.maxtrip.streammonitor",

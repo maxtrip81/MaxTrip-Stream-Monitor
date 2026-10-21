@@ -18,6 +18,15 @@ const DEFAULT_SETTINGS = {
   port: 8686,
   notify: {
     desktop: true,
+    mobile: {
+      enabled: true,
+      fcm: { serviceAccount: '' },
+      apns: { keyId: '', teamId: '', bundleId: 'it.maxtrip.streammonitor', privateKey: '', production: true }
+    },
+    email: { enabled: false, host: '', port: 587, user: '', pass: '', from: '', to: '' },
+    twilio: { enabled: false, accountSid: '', authToken: '', from: '', to: '' },
+    discord: { enabled: false, url: '' },
+    slack: { enabled: false, url: '' },
     ntfy: { enabled: false, server: 'https://ntfy.sh', topic: '', token: '' },
     telegram: { enabled: false, botToken: '', chatId: '' },
     pushover: { enabled: false, userKey: '', appToken: '' },
@@ -43,6 +52,8 @@ class Store {
     fs.mkdirSync(dataDir, { recursive: true });
     this.file = path.join(dataDir, 'config.json');
     this.eventsFile = path.join(dataDir, 'events.json');
+    this.devicesFile = path.join(dataDir, 'devices.json');
+    this.devices = [];
     this.settings = deepMerge(DEFAULT_SETTINGS, {});
     this.streams = [];
     this.events = [];
@@ -55,6 +66,10 @@ class Store {
       this.settings = deepMerge(DEFAULT_SETTINGS, raw.settings || {});
       this.streams = Array.isArray(raw.streams) ? raw.streams : [];
     } catch (_) { /* primo avvio */ }
+    try {
+      const dv = JSON.parse(fs.readFileSync(this.devicesFile, 'utf8'));
+      if (Array.isArray(dv)) this.devices = dv;
+    } catch (_) { /* nessun dispositivo */ }
     try {
       const ev = JSON.parse(fs.readFileSync(this.eventsFile, 'utf8'));
       if (Array.isArray(ev)) this.events = ev.slice(-500);
@@ -89,6 +104,32 @@ class Store {
     this.settings = deepMerge(this.settings, patch || {});
     this.save();
     return this.settings;
+  }
+
+  // ---------- dispositivi mobili registrati per le notifiche push ----------
+  saveDevices() {
+    fs.writeFileSync(this.devicesFile, JSON.stringify(this.devices, null, 2));
+  }
+
+  registerDevice({ token, platform, name, lang }) {
+    token = String(token || '').trim();
+    if (!token || !['android', 'ios'].includes(platform)) return null;
+    const now = Date.now();
+    let d = this.devices.find(x => x.token === token);
+    if (!d) {
+      d = { id: crypto.randomUUID(), token, platform, addedAt: now };
+      this.devices.push(d);
+    }
+    Object.assign(d, { platform, name: String(name || '').slice(0, 80), lang: lang === 'en' ? 'en' : 'it', lastSeen: now });
+    this.saveDevices();
+    return d;
+  }
+
+  removeDevices(pred) {
+    const n = this.devices.length;
+    this.devices = this.devices.filter(d => !pred(d));
+    if (this.devices.length !== n) this.saveDevices();
+    return n - this.devices.length;
   }
 
   addStream(data) {
