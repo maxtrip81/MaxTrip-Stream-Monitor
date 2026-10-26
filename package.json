@@ -1,7 +1,7 @@
 {
   "name": "trip-streaming-monitor",
   "productName": "TRIP Streaming Monitor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Monitoraggio professionale di flussi streaming live (web radio, web TV) con VU meter, allarmi ON AIR / OFF AIR / SILENZIO e notifiche push.",
   "author": {
     "name": "Massimiliano Mascioli Trippa",
