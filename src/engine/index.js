@@ -303,6 +303,13 @@ class Engine extends EventEmitter {
         this._broadcast({ type: 'events', events: [] });
         return this._json(res, 200, { ok: true });
       }
+      if (p === '/api/streams/order' && req.method === 'PUT') {
+        const { ids } = await this._body(req);
+        if (!Array.isArray(ids)) return this._json(res, 400, { error: 'ids required' });
+        this.store.reorder(ids.map(String));
+        this._broadcastState();
+        return this._json(res, 200, { ok: true });
+      }
       if (p === '/api/streams' && req.method === 'POST') {
         const b = await this._body(req);
         if (!b.url) return this._json(res, 400, { error: 'url required' });

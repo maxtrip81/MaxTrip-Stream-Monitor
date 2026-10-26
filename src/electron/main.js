@@ -1,7 +1,7 @@
 'use strict';
 // App desktop (Windows / macOS / Linux): avvia il motore di monitoraggio e mostra l'interfaccia.
 // Creato da Massimiliano Mascioli Trippa — max@maxtrip.it
-const { app, BrowserWindow, Notification, Tray, Menu, nativeImage, shell, dialog } = require('electron');
+const { app, BrowserWindow, Notification, Tray, Menu, nativeImage, nativeTheme, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const { Engine } = require('../engine');
 
@@ -70,11 +70,14 @@ function createWindow() {
     height: 820,
     minWidth: 380,
     minHeight: 500,
-    backgroundColor: '#0d1117',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0d1117' : '#f3f5f8',
     title: 'TRIP Streaming Monitor',
     icon: path.join(ROOT, 'build', 'icon.png'),
     autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' }
+    webPreferences: {
+      contextIsolation: true, nodeIntegration: false, backgroundThrottling: false,
+      autoplayPolicy: 'no-user-gesture-required', preload: path.join(__dirname, 'preload.js')
+    }
   });
   win.loadURL(`http://127.0.0.1:${engine.port}/`);
   // esportazione dei flussi: finestra "Salva con nome", proposta nella cartella Documenti
@@ -96,6 +99,12 @@ function createWindow() {
     }
   });
 }
+
+// tema scelto nell'interfaccia: cornice della finestra e menu seguono la stessa scelta
+ipcMain.on('theme', (e, mode) => {
+  nativeTheme.themeSource = ['dark', 'light'].includes(mode) ? mode : 'system';
+  if (win) win.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#0d1117' : '#f3f5f8');
+});
 
 function showWindow() {
   if (!win) return;

@@ -139,6 +139,16 @@ class Store {
     return s;
   }
 
+  /** Nuovo ordine dei flussi (id nell'ordine scelto); gli id non indicati restano in fondo. */
+  reorder(ids) {
+    const pos = new Map((ids || []).map((id, i) => [id, i]));
+    this.streams = this.streams
+      .map((s, i) => ({ s, k: pos.has(s.id) ? pos.get(s.id) : ids.length + i }))
+      .sort((a, b) => a.k - b.k)
+      .map(x => x.s);
+    this.save();
+  }
+
   updateStream(id, data) {
     const i = this.streams.findIndex(s => s.id === id);
     if (i < 0) return null;

@@ -83,6 +83,11 @@ Esempio di notifica:
 > 🟢 RIPRESA — Radio Rock
 > Segnale ripristinato dopo un'interruzione di 2m 14s.
 
+### Aspetto e disposizione
+
+- **Tema chiaro / scuro**: in *Impostazioni → Generale → Aspetto* o con il pulsante ◐ in alto (Automatico → Scuro → Chiaro). In *Automatico* l'app segue il tema del sistema operativo (Windows, macOS, Linux, iOS, Android) e cambia insieme a lui. La scelta vale per il singolo dispositivo; sull'app desktop si adegua anche la cornice della finestra, sul telefono la barra di stato.
+- **Ordine dei flussi**: trascina un riquadro dalla maniglia ⠿ (con il mouse o con il dito; vicino ai bordi la pagina scorre da sola) oppure seleziona la maniglia e usa le frecce della tastiera. L'ordine viene salvato e vale per tutti i dispositivi collegati e per i file esportati.
+
 ### Esportare e importare i flussi
 
 Con il pulsante **⇅ Esporta / importa** puoi trasferire i flussi su un altro PC, Mac, smartphone o server.
@@ -200,6 +205,10 @@ Any link works: **Icecast 2.x** (mountpoint or just `server:port`, via `status-j
 ### Push notifications
 
 Configure them in **Settings → Notifications**: native push to the **smartphone app** (iPhone / Android, see the [mobile app guide](mobile/README.md)), **email** (any SMTP server), **SMS / WhatsApp** (Twilio), ntfy, Telegram, Pushover, Discord, Slack, generic JSON webhook, plus desktop notifications. Use **"Send test notification"** to check every channel.
+
+### Appearance and layout
+
+Light / dark theme: *Settings → General → Appearance* or the ◐ button (Automatic → Dark → Light); Automatic follows the operating system theme. Reorder streams by dragging a card by its ⠿ handle (mouse or touch) or with the arrow keys; the order is saved for all connected devices and exports.
 
 ### Export / import streams
 

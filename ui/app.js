@@ -25,6 +25,8 @@
   const cards = new Map();    // id -> { stream, el, lv, disp }
   let events = [];
   let devices = [];
+  let drag = null;          // trascinamento in corso di un riquadro
+  let themeReady = false;
 
   // ---------- i18n ----------
   function t(key, vars) {
@@ -47,6 +49,7 @@
     for (const c of cards.values()) updateCard(c);
     renderEvents(); renderSummary();
     if (persist && settings) api('PUT', '/api/settings', { language: lang }).catch(() => {});
+    if (typeof applyTheme === 'function' && themeReady) applyTheme();
     if (NATIVE) mobile.registerDevice();
   }
 
@@ -128,7 +131,7 @@
     for (const [id, c] of cards) if (!ids.has(id)) { stopListen(c); c.el.remove(); cards.delete(id); }
     st.streams.forEach(onStream);
     // mantiene l'ordine di configurazione
-    st.streams.forEach(s => $('#grid').appendChild(cards.get(s.id).el));
+    if (!drag) st.streams.forEach(s => $('#grid').appendChild(cards.get(s.id).el));
     $('#empty').classList.toggle('hidden', st.streams.length > 0);
     renderSummary();
   }
@@ -165,7 +168,9 @@
   function createCard(s) {
     const el = $('#cardTpl').content.firstElementChild.cloneNode(true);
     applyI18n(el);
+    el.dataset.id = s.id;
     const c = { stream: s, el, lv: [-90, -90, -90, -90], disp: { pL: FLOOR, pR: FLOOR, rL: FLOOR, rR: FLOOR, hL: FLOOR, hR: FLOOR, hLt: 0, hRt: 0 }, audio: null };
+    initDrag(c);
     $('.toggle', el).addEventListener('change', e => api('PUT', '/api/streams/' + c.stream.id, { enabled: e.target.checked }).catch(alertErr));
     $('.edit', el).addEventListener('click', () => openStreamDialog(c.stream));
     $('.del', el).addEventListener('click', () => {
@@ -182,7 +187,7 @@
     $('.name', el).textContent = s.name;
     $('.url', el).textContent = s.url;
     $('.toggle', el).checked = !!s.enabled;
-    el.className = 'card st-' + s.state;
+    el.className = 'card st-' + s.state + (drag && drag.el === el ? ' dragging' : '');
     const alarming = s.alarm && !s.alarm.acknowledged;
     el.classList.toggle('alarming', !!alarming);
     const on = { onair: s.state === 'onair' || s.state === 'silence', silence: s.state === 'silence', offair: s.state === 'offair' };
@@ -761,7 +766,130 @@
     document.documentElement.classList.add('native', 'platform-' + mobile.platform);
   }
 
+  // ---------- tema chiaro / scuro (preferenza di questo dispositivo) ----------
+  const darkMq = window.matchMedia('(prefers-color-scheme: dark)');
+  let theme = ['dark', 'light'].includes(ls.get('theme')) ? ls.get('theme') : 'system';
+
+  function applyTheme() {
+    const root = document.documentElement;
+    if (theme === 'system') delete root.dataset.theme; else root.dataset.theme = theme;
+    const dark = theme === 'dark' || (theme === 'system' && darkMq.matches);
+    document.querySelector('meta[name="theme-color"]').content = dark ? '#0d1117' : '#f3f5f8';
+    const btn = $('#btnTheme');
+    btn.textContent = theme === 'system' ? '◐' : theme === 'dark' ? '☾' : '☀';
+    btn.title = t('themeNow', { t: t(theme === 'system' ? 'themeSystem' : theme === 'dark' ? 'themeDark' : 'themeLight') });
+    btn.setAttribute('aria-label', btn.title);
+    $('#themeSelect').value = theme;
+    // app desktop: anche la cornice della finestra segue il tema
+    if (window.tripDesktop) window.tripDesktop.setTheme(theme);
+    // app mobile: colore e icone della barra di stato
+    const SB = NATIVE && mobile.plugins.StatusBar;
+    if (SB) {
+      SB.setStyle({ style: dark ? 'DARK' : 'LIGHT' }).catch(() => {});
+      if (mobile.platform === 'android') SB.setBackgroundColor({ color: dark ? '#161b22' : '#ffffff' }).catch(() => {});
+    }
+  }
+  function setTheme(v) {
+    theme = ['dark', 'light'].includes(v) ? v : 'system';
+    ls.set('theme', theme);
+    applyTheme();
+  }
+  darkMq.addEventListener('change', () => { if (theme === 'system') applyTheme(); });
+  $('#btnTheme').addEventListener('click', () => setTheme({ system: 'dark', dark: 'light', light: 'system' }[theme]));
+  $('#themeSelect').addEventListener('change', e => setTheme(e.target.value));
+
+  // ---------- ordinamento dei riquadri: trascinamento (mouse e touch) e tastiera ----------
+  function currentOrder() { return [...$('#grid').querySelectorAll('.card')].map(el => el.dataset.id); }
+  function saveOrder(order) { api('PUT', '/api/streams/order', { ids: order }).catch(alertErr); }
+
+  function initDrag(c) {
+    const handle = $('.drag-handle', c.el);
+    handle.addEventListener('pointerdown', e => startDrag(e, c, handle));
+    handle.addEventListener('keydown', e => {
+      const el = c.el, grid = $('#grid');
+      const back = e.key === 'ArrowUp' || e.key === 'ArrowLeft', fwd = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+      if (!back && !fwd) return;
+      e.preventDefault();
+      if (back && el.previousElementSibling) grid.insertBefore(el, el.previousElementSibling);
+      else if (fwd && el.nextElementSibling) grid.insertBefore(el.nextElementSibling, el);
+      else return;
+      handle.focus();
+      el.scrollIntoView({ block: 'nearest' });
+      flashMoved(el);
+      saveOrder(currentOrder());
+    });
+  }
+
+  function flashMoved(el) {
+    el.classList.remove('moved'); void el.offsetWidth; el.classList.add('moved');
+    setTimeout(() => el.classList.remove('moved'), 600);
+  }
+
+  function startDrag(e, c, handle) {
+    if (drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    const el = c.el, r = el.getBoundingClientRect();
+    const ph = document.createElement('div');
+    ph.className = 'card-placeholder';
+    ph.style.height = r.height + 'px';
+    el.parentNode.insertBefore(ph, el);
+    drag = { el, ph, handle, dx: e.clientX - r.left, dy: e.clientY - r.top, x: e.clientX, y: e.clientY, start: currentOrder().join() };
+    Object.assign(el.style, { width: r.width + 'px', height: r.height + 'px' });
+    el.classList.add('dragging');
+    document.body.classList.add('is-dragging');
+    try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+    handle.addEventListener('pointermove', onDragMove);
+    handle.addEventListener('pointerup', onDragEnd);
+    handle.addEventListener('pointercancel', onDragEnd);
+    moveDrag();
+    requestAnimationFrame(autoScroll);
+  }
+
+  function onDragMove(e) { if (drag) { drag.x = e.clientX; drag.y = e.clientY; moveDrag(); } }
+
+  function moveDrag() {
+    const { el, ph, x, y } = drag;
+    el.style.left = (x - drag.dx) + 'px';
+    el.style.top = (y - drag.dy) + 'px';
+    const grid = $('#grid');
+    const hit = document.elementFromPoint(x, y);
+    const target = hit && hit.closest('.card, .card-placeholder');
+    if (!target || target === ph || target === el || target.parentNode !== grid) return;
+    const tr = target.getBoundingClientRect();
+    // griglia a una colonna (telefono): decide la metà verticale; a più colonne: quella orizzontale
+    const singleColumn = tr.width > grid.clientWidth * 0.6;
+    const after = singleColumn ? y > tr.top + tr.height / 2 : x > tr.left + tr.width / 2;
+    grid.insertBefore(ph, after ? target.nextSibling : target);
+  }
+
+  function autoScroll() {
+    if (!drag) return;
+    const edge = 70, speed = 14;
+    if (drag.y < edge) window.scrollBy(0, -speed);
+    else if (drag.y > window.innerHeight - edge) window.scrollBy(0, speed);
+    if (drag.y < edge || drag.y > window.innerHeight - edge) moveDrag();
+    requestAnimationFrame(autoScroll);
+  }
+
+  function onDragEnd() {
+    if (!drag) return;
+    const { el, ph, handle, start } = drag;
+    handle.removeEventListener('pointermove', onDragMove);
+    handle.removeEventListener('pointerup', onDragEnd);
+    handle.removeEventListener('pointercancel', onDragEnd);
+    ph.parentNode.insertBefore(el, ph);
+    ph.remove();
+    el.classList.remove('dragging');
+    for (const k of ['width', 'height', 'left', 'top']) el.style[k] = '';
+    document.body.classList.remove('is-dragging');
+    drag = null;
+    const order = currentOrder();
+    if (order.join() !== start) { flashMoved(el); saveOrder(order); }
+  }
+
   applyI18n();
   renderEvents();
   connect();
+  themeReady = true;
+  applyTheme();
 })();

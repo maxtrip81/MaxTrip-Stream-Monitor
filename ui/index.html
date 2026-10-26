@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
+  <script>
+    // tema scelto dall'utente, applicato prima della visualizzazione (nessun lampo di colore)
+    try { var th = localStorage.getItem('sm.theme'); if (th === 'dark' || th === 'light') document.documentElement.dataset.theme = th; } catch (e) {}
+  </script>
   <meta name="author" content="Massimiliano Mascioli Trippa — max@maxtrip.it">
   <title>TRIP Streaming Monitor</title>
   <link rel="manifest" href="manifest.webmanifest">
@@ -27,6 +31,7 @@
         <option value="en">English</option>
       </select>
       <button class="btn primary" id="btnAdd"><span>＋</span> <span data-i18n="addStream"></span></button>
+      <button class="btn icon theme-btn" id="btnTheme">◐</button>
       <button class="btn icon" id="btnTransfer" data-i18n-title="transfer">⇅</button>
       <button class="btn icon" id="btnEvents" data-i18n-title="events">☰</button>
       <button class="btn icon" id="btnSettings" data-i18n-title="settings">⚙</button>
@@ -97,6 +102,14 @@
           <legend data-i18n="general"></legend>
           <label><span data-i18n="language"></span>
             <select name="language"><option value="it">Italiano</option><option value="en">English</option></select>
+          </label>
+          <label><span data-i18n="theme"></span>
+            <select id="themeSelect">
+              <option value="system" data-i18n="themeSystem"></option>
+              <option value="dark" data-i18n="themeDark"></option>
+              <option value="light" data-i18n="themeLight"></option>
+            </select>
+            <small data-i18n="themeHint"></small>
           </label>
           <label class="check"><input type="checkbox" name="alarmSound"> <span data-i18n="alarmSound"></span></label>
           <label class="check"><input type="checkbox" name="notifyOnRecovery"> <span data-i18n="notifyOnRecovery"></span></label>
@@ -304,6 +317,7 @@
   <template id="cardTpl">
     <article class="card">
       <div class="card-head">
+        <button type="button" class="drag-handle" data-i18n-title="dragHint">⠿</button>
         <div class="title">
           <h3 class="name"></h3>
           <p class="url"></p>
