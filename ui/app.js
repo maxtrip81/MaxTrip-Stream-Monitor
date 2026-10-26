@@ -1,4 +1,4 @@
-/* MaxTrip Stream Monitor — interfaccia
+/* TRIP Streaming Monitor — interfaccia
  * Creato da Massimiliano Mascioli Trippa — max@maxtrip.it
  * La stessa interfaccia gira su desktop (Electron), app mobile (Capacitor) e browser:
  * si collega al motore di monitoraggio tramite API REST + WebSocket. */
@@ -530,7 +530,7 @@
       out.textContent = !results.length ? t('testNone') : results.map(r => r.ok
         ? `✅ ${r.channel}: ${t('testSent')}${r.info ? ` (${r.info})` : ''}`
         : `❌ ${r.channel}: ${r.error}`).join('\n');
-      if (!ELECTRON && !(NATIVE && mobile.pushState === 'on')) localNotify({ title: '✅ MaxTrip Stream Monitor', message: t('testSent'), streamId: 'test', type: 'test' });
+      if (!ELECTRON && !(NATIVE && mobile.pushState === 'on')) localNotify({ title: '✅ TRIP Streaming Monitor', message: t('testSent'), streamId: 'test', type: 'test' });
     } catch (e) { out.textContent = t('testFailed', { e: e.message }); }
   });
   $('#settingsForm').addEventListener('submit', async e => {
@@ -561,6 +561,128 @@
   function alertErr(e) { alert(e.message || e); }
 
   if (location.search.includes('token=') && !NATIVE) ls.set('token', token);
+  // ---------- esporta / importa flussi ----------
+  const FIELD_LABEL = {
+    name: 'streamName', url: 'streamUrl', enabled: 'enable', silenceThresholdDb: 'silenceThreshold',
+    silenceSeconds: 'silenceSeconds', offAirSeconds: 'offAirSeconds', userAgent: 'User-Agent', headers: 'httpHeaders'
+  };
+  const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fieldVal = (f, v) => v == null || v === '' ? '—' : f === 'enabled' ? t(v ? 'yes' : 'no') : String(v);
+
+  function openTransfer() {
+    const ul = $('#exportList');
+    ul.innerHTML = '';
+    for (const c of cards.values()) {
+      const li = document.createElement('li');
+      li.innerHTML = `<label><input type="checkbox" checked value="${esc(c.stream.id)}"><span>${esc(c.stream.name)}<small>${esc(c.stream.url)}</small></span></label>`;
+      ul.appendChild(li);
+    }
+    $('#importError').textContent = '';
+    updateExportBtn();
+    $('#transferDialog').showModal();
+  }
+  function selectedIds() { return [...$('#exportList').querySelectorAll('input:checked')].map(i => i.value); }
+  function updateExportBtn() {
+    const n = selectedIds().length;
+    const b = $('#btnDoExport');
+    b.textContent = n === 1 ? t('exportBtn1') : t('exportBtn', { n });
+    b.disabled = !n;
+  }
+  $('#btnTransfer').addEventListener('click', openTransfer);
+  $('#exportList').addEventListener('change', updateExportBtn);
+  $('#btnSelAll').addEventListener('click', () => { $('#exportList').querySelectorAll('input').forEach(i => { i.checked = true; }); updateExportBtn(); });
+  $('#btnSelNone').addEventListener('click', () => { $('#exportList').querySelectorAll('input').forEach(i => { i.checked = false; }); updateExportBtn(); });
+
+  $('#btnDoExport').addEventListener('click', async () => {
+    const ids = selectedIds();
+    const all = ids.length === cards.size;
+    try {
+      const res = await fetch(`${server}/api/export${all ? '' : '?ids=' + ids.join(',')}`, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const name = ((res.headers.get('content-disposition') || '').match(/filename="([^"]+)"/) || [])[1] || 'TRIP-Streaming-Monitor.json';
+      await saveFile(name, text);
+    } catch (e) { alertErr(e); }
+  });
+
+  /** Salva il file: sul telefono apre la condivisione (File, Drive, email…), altrove lo scarica. */
+  async function saveFile(name, text) {
+    const { Filesystem, Share } = (window.Capacitor && window.Capacitor.Plugins) || {};
+    if (NATIVE && Filesystem && Share) {
+      await Filesystem.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' });
+      const { uri } = await Filesystem.getUri({ path: name, directory: 'CACHE' });
+      await Share.share({ title: name, files: [uri] });
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  let importItems = [];
+  $('#btnChooseImport').addEventListener('click', () => { $('#importFile').value = ''; $('#importFile').click(); });
+  $('#importFile').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    $('#importError').textContent = '';
+    try {
+      const { items, errors } = await api('POST', '/api/import/preview', { text: await file.text() });
+      if (!items.length) { $('#importError').textContent = t('impErr') + (errors.length ? ` (${errors.join(', ')})` : ''); return; }
+      importItems = items;
+      $('#transferDialog').close();
+      renderImport();
+      $('#importDialog').showModal();
+    } catch (err) { $('#importError').textContent = err.message; }
+  });
+
+  function renderImport() {
+    const by = st => importItems.filter(i => i.status === st);
+    const news = by('new'), same = by('identical'), conf = by('conflict');
+    $('#importSummary').textContent = t('impSummary', { new: news.length, same: same.length, conf: conf.length });
+    $('#impNewSec').classList.toggle('hidden', !news.length);
+    $('#impConflictSec').classList.toggle('hidden', !conf.length);
+    $('#impSameSec').classList.toggle('hidden', !same.length);
+    $('#impNewList').innerHTML = news.map(i => `<li><label><input type="checkbox" checked data-index="${i.index}"><span>${esc(i.incoming.name)}<small>${esc(i.incoming.url)}</small></span></label></li>`).join('');
+    $('#impSameSec summary').textContent = same.length === 1 ? t('impIdentical1') : t('impIdentical', { n: same.length });
+    $('#impSameList').innerHTML = same.map(i => `<li>${esc(i.incoming.name)}<small>${esc(i.incoming.url)}</small></li>`).join('');
+    $('#impApplyAll').value = '';
+    $('#impConflictList').innerHTML = conf.map(i => {
+      const rows = i.diffs.map(f => `<tr><th>${esc(f in FIELD_LABEL && FIELD_LABEL[f] !== 'User-Agent' ? t(FIELD_LABEL[f]) : 'User-Agent')}</th>` +
+        `<td>${esc(fieldVal(f, i.existing[f]))}</td><td class="new">${esc(fieldVal(f, i.incoming[f]))}</td></tr>`).join('');
+      const acts = ['keep', 'replace', 'duplicate', 'delete'].map(a =>
+        `<label><input type="radio" name="act-${i.index}" value="${a}"${a === 'keep' ? ' checked' : ''}> ${t('act' + a[0].toUpperCase() + a.slice(1))}</label>`).join('');
+      return `<div class="conflict" data-index="${i.index}">
+        <div class="head">${esc(i.existing.name)} <small>· ${t('match' + i.match[0].toUpperCase() + i.match.slice(1))}</small></div>
+        <table class="diff"><tr><th></th><th>${t('current')}</th><th>${t('inFile')}</th></tr>${rows}</table>
+        <div class="actions-row">${acts}</div></div>`;
+    }).join('');
+  }
+  $('#impApplyAll').addEventListener('change', e => {
+    if (!e.target.value) return;
+    $('#impConflictList').querySelectorAll(`input[value="${e.target.value}"]`).forEach(r => { r.checked = true; });
+  });
+
+  $('#importForm').addEventListener('submit', async e => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    const decisions = [];
+    for (const i of importItems) {
+      if (i.status === 'new') {
+        if ($(`#impNewList input[data-index="${i.index}"]`).checked) decisions.push({ incoming: i.incoming, action: 'add' });
+      } else if (i.status === 'conflict') {
+        const r = $(`#impConflictList input[name="act-${i.index}"]:checked`);
+        decisions.push({ incoming: i.incoming, action: r ? r.value : 'keep', existingId: i.existing.id });
+      }
+    }
+    if (!decisions.some(d => d.action !== 'keep')) { alert(t('importNothing')); return; }
+    try {
+      const { summary } = await api('POST', '/api/import/apply', { decisions });
+      alert(t('importDone', summary));
+    } catch (err) { alertErr(err); }
+  });
+
   // ---------- app per smartphone (Capacitor: iOS / Android) ----------
   const mobile = {
     token: ls.get('pushToken'),

@@ -1,6 +1,8 @@
-# MaxTrip Stream Monitor
+# TRIP Streaming Monitor
 
 **Creato da Massimiliano Mascioli Trippa — [max@maxtrip.it](mailto:max@maxtrip.it)**
+
+> Nome precedente: *MaxTrip Stream Monitor*. Aggiornando l'app desktop, flussi e impostazioni vengono trasferiti automaticamente.
 
 🇮🇹 [Italiano](#italiano) · 🇬🇧 [English](#english)
 
@@ -81,6 +83,19 @@ Esempio di notifica:
 > 🟢 RIPRESA — Radio Rock
 > Segnale ripristinato dopo un'interruzione di 2m 14s.
 
+### Esportare e importare i flussi
+
+Con il pulsante **⇅ Esporta / importa** puoi trasferire i flussi su un altro PC, Mac, smartphone o server.
+
+- **Esporta:** scegli tutti i flussi o solo alcuni e salvali in un unico file `.json` (nome, indirizzo, attivazione, soglie personalizzate, User-Agent e intestazioni HTTP). Sul telefono il file si salva o si condivide (File, Drive, email…).
+- **Importa:** carica il file sull'altro dispositivo. L'app confronta ogni flusso con quelli già presenti, riconoscendolo dallo stesso flusso esportato, dallo stesso indirizzo o dallo stesso nome:
+  - **nuovo** → viene aggiunto (puoi escluderlo togliendo la spunta);
+  - **già presente e identico** (copia esatta) → non viene modificato;
+  - **già presente con dati diversi** → vedi le differenze campo per campo e scegli **Mantieni**, **Sostituisci**, **Duplica** o **Elimina** (anche per tutti insieme).
+- In importazione sono accettate anche le playlist `.m3u` / `.pls` con più stazioni e il file `config.json` dell'app.
+
+Importando il file su un computer vuoto ritornano i flussi originali, con gli stessi identificativi: un'importazione successiva dello stesso file li riconosce come copie esatte.
+
 ### Soglie (modificabili, anche per singolo flusso)
 
 | Parametro | Predefinito | Significato |
@@ -110,10 +125,10 @@ In alternativa, il workflow GitHub Actions `.github/workflows/build.yml` crea au
 
 | Sistema | File |
 |---|---|
-| Windows 10/11 | `MaxTrip-Stream-Monitor-Setup-<versione>-win-x64.exe` |
-| Mac con Apple Silicon (M1, M2, M3, M4…) | `MaxTrip-Stream-Monitor-<versione>-mac-arm64.dmg` |
-| Mac con processore Intel | `MaxTrip-Stream-Monitor-<versione>-mac-x64.dmg` |
-| Linux | `MaxTrip-Stream-Monitor-<versione>-linux-x86_64.AppImage` |
+| Windows 10/11 | `TRIP-Streaming-Monitor-Setup-<versione>-win-x64.exe` |
+| Mac con Apple Silicon (M1, M2, M3, M4…) | `TRIP-Streaming-Monitor-<versione>-mac-arm64.dmg` |
+| Mac con processore Intel | `TRIP-Streaming-Monitor-<versione>-mac-x64.dmg` |
+| Linux | `TRIP-Streaming-Monitor-<versione>-linux-x86_64.AppImage` |
 
 Per sapere che Mac hai: menu  → *Informazioni su questo Mac* → "Chip Apple M…" = Apple Silicon, "Processore Intel" = Intel.
 
@@ -122,7 +137,7 @@ Per sapere che Mac hai: menu  → *Informazioni su questo Mac* → "Chip Apple M
 2. apri *Impostazioni di Sistema → Privacy e sicurezza*, scorri in basso e premi **Apri comunque**.
 
 Se macOS dice che l'app "è danneggiata", apri il Terminale ed esegui:
-`xattr -cr "/Applications/MaxTrip Stream Monitor.app"`
+`xattr -cr "/Applications/TRIP Streaming Monitor.app"`
 
 Per distribuire su macOS senza avvisi serve la firma con un Apple Developer ID (99 $/anno) e la notarizzazione.
 
@@ -141,8 +156,8 @@ L'interfaccia funziona anche da qualsiasi browser all'indirizzo `http://IP:8686/
 **Server 24/7 (Docker)**
 
 ```bash
-docker build -t maxtrip-stream-monitor .
-docker run -d --restart unless-stopped -p 8686:8686 -v sm-data:/data --name stream-monitor maxtrip-stream-monitor
+docker build -t trip-streaming-monitor .
+docker run -d --restart unless-stopped -p 8686:8686 -v sm-data:/data --name stream-monitor trip-streaming-monitor
 ```
 
 Oppure senza Docker: `npm install --omit=dev && HOST=0.0.0.0 npm run server` (richiede `ffmpeg` installato o il pacchetto `ffmpeg-static`).
@@ -186,6 +201,10 @@ Any link works: **Icecast 2.x** (mountpoint or just `server:port`, via `status-j
 
 Configure them in **Settings → Notifications**: native push to the **smartphone app** (iPhone / Android, see the [mobile app guide](mobile/README.md)), **email** (any SMTP server), **SMS / WhatsApp** (Twilio), ntfy, Telegram, Pushover, Discord, Slack, generic JSON webhook, plus desktop notifications. Use **"Send test notification"** to check every channel.
 
+### Export / import streams
+
+Use **⇅ Export / import** to move streams to another PC, Mac, smartphone or server. Export all streams or a selection to a single `.json` file. On import, missing streams are added, exact copies are left untouched, and for streams already present with different data you see a field-by-field comparison and choose **Keep**, **Replace**, **Duplicate** or **Delete** (individually or for all). `.m3u` / `.pls` playlists with several stations and the app's `config.json` can be imported too.
+
 ### Build
 
 ```bash
@@ -193,11 +212,11 @@ npm install && npm start          # desktop app
 npm run dist:win / dist:mac       # installers (build each on its own OS, or use the GitHub Actions workflow)
 cd mobile && npm install && npm run android   # Android (Android Studio)
 cd mobile && npm install && npm run ios       # iOS (macOS + Xcode)
-docker build -t maxtrip-stream-monitor . && docker run -d -p 8686:8686 -v sm-data:/data maxtrip-stream-monitor
+docker build -t trip-streaming-monitor . && docker run -d -p 8686:8686 -v sm-data:/data trip-streaming-monitor
 ```
 
 Downloads: `…-win-x64.exe` (Windows), `…-mac-arm64.dmg` (Apple Silicon Macs: M1/M2/M3/M4), `…-mac-x64.dmg` (Intel Macs), `…-linux-x86_64.AppImage` (Linux).
-On first launch on macOS, open *System Settings → Privacy & Security* and click **Open Anyway** (the app is ad-hoc signed, not signed with an Apple Developer ID). If macOS reports the app as "damaged", run `xattr -cr "/Applications/MaxTrip Stream Monitor.app"`.
+On first launch on macOS, open *System Settings → Privacy & Security* and click **Open Anyway** (the app is ad-hoc signed, not signed with an Apple Developer ID). If macOS reports the app as "damaged", run `xattr -cr "/Applications/TRIP Streaming Monitor.app"`.
 
 To connect the mobile app: in the desktop app enable *Settings → Remote access*, generate a token, then enter `http://COMPUTER-IP:8686` and the token on the phone.
 See the [mobile app guide](mobile/README.md) for installation, push notifications and store publishing.

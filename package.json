@@ -1,6 +1,6 @@
 {
-  "name": "maxtrip-stream-monitor",
-  "productName": "MaxTrip Stream Monitor",
+  "name": "trip-streaming-monitor",
+  "productName": "TRIP Streaming Monitor",
   "version": "1.0.0",
   "description": "Monitoraggio professionale di flussi streaming live (web radio, web TV) con VU meter, allarmi ON AIR / OFF AIR / SILENZIO e notifiche push.",
   "author": {
@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "server": "node src/server.js",
-    "test": "node test/engine.test.js && node test/sources.test.js && node test/notify.test.js",
+    "test": "node test/engine.test.js && node test/sources.test.js && node test/notify.test.js && node test/transfer.test.js",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
@@ -30,7 +30,7 @@
   },
   "build": {
     "appId": "it.maxtrip.streammonitor",
-    "productName": "MaxTrip Stream Monitor",
+    "productName": "TRIP Streaming Monitor",
     "copyright": "© Massimiliano Mascioli Trippa — max@maxtrip.it",
     "files": [
       "src/**/*",
@@ -50,7 +50,7 @@
         "nsis"
       ],
       "icon": "build/icon.png",
-      "artifactName": "MaxTrip-Stream-Monitor-Setup-${version}-win-${arch}.${ext}"
+      "artifactName": "TRIP-Streaming-Monitor-Setup-${version}-win-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -64,14 +64,14 @@
       "icon": "build/icon.png",
       "identity": null,
       "hardenedRuntime": false,
-      "artifactName": "MaxTrip-Stream-Monitor-${version}-mac-${arch}.${ext}"
+      "artifactName": "TRIP-Streaming-Monitor-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "AudioVideo",
-      "artifactName": "MaxTrip-Stream-Monitor-${version}-linux-${arch}.${ext}"
+      "artifactName": "TRIP-Streaming-Monitor-${version}-linux-${arch}.${ext}"
     },
     "afterPack": "scripts/adhoc-sign.js"
   }

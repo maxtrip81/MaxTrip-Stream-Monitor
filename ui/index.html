@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
   <meta name="author" content="Massimiliano Mascioli Trippa — max@maxtrip.it">
-  <title>MaxTrip Stream Monitor</title>
+  <title>TRIP Streaming Monitor</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
@@ -16,7 +16,7 @@
     <div class="brand">
       <img src="icon.png" alt="" class="logo">
       <div>
-        <h1>MaxTrip Stream Monitor</h1>
+        <h1>TRIP Streaming Monitor</h1>
         <p class="sub" data-i18n="appSubtitle"></p>
       </div>
     </div>
@@ -27,6 +27,7 @@
         <option value="en">English</option>
       </select>
       <button class="btn primary" id="btnAdd"><span>＋</span> <span data-i18n="addStream"></span></button>
+      <button class="btn icon" id="btnTransfer" data-i18n-title="transfer">⇅</button>
       <button class="btn icon" id="btnEvents" data-i18n-title="events">☰</button>
       <button class="btn icon" id="btnSettings" data-i18n-title="settings">⚙</button>
       <button class="btn icon" id="btnAbout" data-i18n-title="about">ⓘ</button>
@@ -209,6 +210,67 @@
     </form>
   </dialog>
 
+  <!-- Esporta / importa flussi -->
+  <dialog id="transferDialog">
+    <form method="dialog">
+      <h2 data-i18n="transfer"></h2>
+      <fieldset>
+        <legend data-i18n="exportTitle"></legend>
+        <p class="hint" data-i18n="exportHint"></p>
+        <div class="inline-row">
+          <button type="button" class="btn small" id="btnSelAll" data-i18n="selectAll"></button>
+          <button type="button" class="btn small" id="btnSelNone" data-i18n="selectNone"></button>
+        </div>
+        <ul class="pick-list" id="exportList"></ul>
+        <button type="button" class="btn primary" id="btnDoExport"></button>
+      </fieldset>
+      <fieldset>
+        <legend data-i18n="importTitle"></legend>
+        <p class="hint" data-i18n="importHint"></p>
+        <input type="file" id="importFile" class="hidden" accept=".json,.m3u,.m3u8,.pls,.txt,application/json,audio/x-mpegurl,audio/x-scpls,text/plain">
+        <button type="button" class="btn" id="btnChooseImport" data-i18n="chooseFile"></button>
+        <p class="error" id="importError"></p>
+      </fieldset>
+      <div class="dlg-actions"><button class="btn" value="cancel" data-i18n="close"></button></div>
+    </form>
+  </dialog>
+
+  <!-- Anteprima importazione -->
+  <dialog id="importDialog" class="wide">
+    <form method="dialog" id="importForm">
+      <h2 data-i18n="importTitle"></h2>
+      <p id="importSummary"></p>
+      <section id="impNewSec">
+        <h3 data-i18n="impNew"></h3>
+        <ul class="pick-list" id="impNewList"></ul>
+      </section>
+      <section id="impConflictSec">
+        <h3 data-i18n="impConflicts"></h3>
+        <p class="hint" data-i18n="impConflictHint"></p>
+        <label class="apply-all"><span data-i18n="applyAll"></span>
+          <select id="impApplyAll">
+            <option value="" data-i18n="applyAllNone"></option>
+            <option value="keep" data-i18n="actKeep"></option>
+            <option value="replace" data-i18n="actReplace"></option>
+            <option value="duplicate" data-i18n="actDuplicate"></option>
+            <option value="delete" data-i18n="actDelete"></option>
+          </select>
+        </label>
+        <div id="impConflictList"></div>
+      </section>
+      <section id="impSameSec">
+        <details>
+          <summary data-i18n="impIdentical"></summary>
+          <ul class="pick-list" id="impSameList"></ul>
+        </details>
+      </section>
+      <div class="dlg-actions">
+        <button class="btn" value="cancel" formnovalidate data-i18n="cancel"></button>
+        <button class="btn primary" value="ok" id="btnDoImport" data-i18n="importBtn"></button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Modale connessione (app mobile / browser remoto) -->
   <dialog id="connectDialog">
     <form method="dialog" id="connectForm">
@@ -229,7 +291,7 @@
     <form method="dialog">
       <div class="about">
         <img src="icon.png" alt="" class="logo big">
-        <h2>MaxTrip Stream Monitor <small id="aboutVersion"></small></h2>
+        <h2>TRIP Streaming Monitor <small id="aboutVersion"></small></h2>
         <p data-i18n="aboutText"></p>
         <p><span data-i18n="createdBy"></span><br><strong>Massimiliano Mascioli Trippa</strong><br>
           <a href="mailto:max@maxtrip.it">max@maxtrip.it</a></p>

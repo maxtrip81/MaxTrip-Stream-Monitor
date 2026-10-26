@@ -1,6 +1,6 @@
 {
-  "name": "MaxTrip Stream Monitor",
-  "short_name": "Stream Monitor",
+  "name": "TRIP Streaming Monitor",
+  "short_name": "TRIP Monitor",
   "description": "Monitoraggio flussi live — Creato da Massimiliano Mascioli Trippa (max@maxtrip.it)",
   "start_url": "./",
   "display": "standalone",

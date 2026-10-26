@@ -12,6 +12,7 @@ const { StreamMonitor, STATE, FFMPEG, inputArgs, streamOptions } = require('./mo
 const { resolveStream, findYtDlp } = require('./resolve');
 const { sendAll } = require('./notifier');
 const { describe } = require('./i18n');
+const transfer = require('./transfer');
 const pkg = require('../../package.json');
 
 const UI_DIR = path.join(__dirname, '..', '..', 'ui');
@@ -22,7 +23,7 @@ const MIME = {
 };
 
 const ABOUT = {
-  app: 'MaxTrip Stream Monitor',
+  app: 'TRIP Streaming Monitor',
   get ytdlp() { return !!findYtDlp(); },
   version: pkg.version,
   author: 'Massimiliano Mascioli Trippa',
@@ -115,8 +116,8 @@ class Engine extends EventEmitter {
     if (this.server) this.server.close();
   }
 
-  addStream(data) {
-    const s = this.store.addStream(data);
+  addStream(data, keepId) {
+    const s = this.store.addStream(data, keepId);
     this._attach(s);
     this._broadcastState();
     return s;
@@ -281,7 +282,7 @@ class Engine extends EventEmitter {
 
   async _body(req) {
     let data = '';
-    for await (const c of req) { data += c; if (data.length > 1e6) throw new Error('too large'); }
+    for await (const c of req) { data += c; if (data.length > 5e6) throw new Error('too large'); }
     return data ? JSON.parse(data) : {};
   }
 
@@ -318,6 +319,29 @@ class Engine extends EventEmitter {
         const n = this.store.removeDevices(d => d.id === dm[1]);
         this._broadcastState();
         return this._json(res, n ? 200 : 404, { ok: !!n });
+      }
+      // ---------- esportazione / importazione dei flussi ----------
+      if (p === '/api/export' && req.method === 'GET') {
+        const ids = (url.searchParams.get('ids') || '').split(',').filter(Boolean);
+        const data = transfer.buildExport(this.store.streams, ids, ABOUT);
+        const name = `TRIP-Streaming-Monitor-${new Date().toISOString().slice(0, 10)}-${data.count}.json`;
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${name}"`, ...CORS });
+        return res.end(JSON.stringify(data, null, 2));
+      }
+      if (p === '/api/import/preview' && req.method === 'POST') {
+        const { text } = await this._body(req);
+        const parsed = transfer.parseImportFile(text);
+        return this._json(res, 200, { source: parsed.source, errors: parsed.errors, items: transfer.analyzeImport(this.store.streams, parsed.streams) });
+      }
+      if (p === '/api/import/apply' && req.method === 'POST') {
+        const { decisions } = await this._body(req);
+        const summary = transfer.applyImport({
+          streams: () => this.store.streams,
+          addStream: (d, keepId) => this.addStream(d, keepId),
+          updateStream: (id, d) => this.updateStream(id, d),
+          removeStream: id => this.removeStream(id)
+        }, decisions);
+        return this._json(res, 200, { summary });
       }
       if (p === '/api/ack' && req.method === 'POST') { this.acknowledge(null); return this._json(res, 200, { ok: true }); }
       if (m && m[2] === '/ack' && req.method === 'POST') { this.acknowledge(m[1]); return this._json(res, 200, { ok: true }); }

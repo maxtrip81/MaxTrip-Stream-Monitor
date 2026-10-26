@@ -8,7 +8,7 @@ const PRIORITY = { offair: 5, silence: 4, recovered: 3, test: 3 };
 const TAGS = { offair: 'red_circle,rotating_light', silence: 'yellow_circle,mute', recovered: 'green_circle', test: 'white_check_mark' };
 const COLOR = { offair: '#ff3b30', silence: '#f5b301', recovered: '#2ecc71', test: '#2f81f7' };
 const TWILIO_API = () => process.env.SM_TWILIO_API || 'https://api.twilio.com';
-const FOOTER = 'MaxTrip Stream Monitor — Massimiliano Mascioli Trippa — max@maxtrip.it';
+const FOOTER = 'TRIP Streaming Monitor — Massimiliano Mascioli Trippa — max@maxtrip.it';
 
 async function post(url, opts) {
   const res = await fetch(url, { ...opts, signal: AbortSignal.timeout(10000) });
@@ -117,7 +117,7 @@ async function sendAll(ev, settings, ctx = {}) {
     jobs.push(['discord', post(n.discord.url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'MaxTrip Stream Monitor', content: `**${title}**\n${text}` })
+      body: JSON.stringify({ username: 'TRIP Streaming Monitor', content: `**${title}**\n${text}` })
     })]);
   }
 

@@ -10,7 +10,7 @@ const T = {
     recoveredOffair: 'Segnale ripristinato dopo un\'interruzione di {dur}.',
     recoveredSilence: 'Audio ripristinato dopo {dur} di silenzio.',
     reason: ' Causa: {r}',
-    test: '✅ Test notifica — MaxTrip Stream Monitor',
+    test: '✅ Test notifica — TRIP Streaming Monitor',
     testBody: 'Le notifiche funzionano correttamente.',
     url: 'URL'
   },
@@ -23,7 +23,7 @@ const T = {
     recoveredOffair: 'Signal restored after a {dur} interruption.',
     recoveredSilence: 'Audio restored after {dur} of silence.',
     reason: ' Cause: {r}',
-    test: '✅ Test notification — MaxTrip Stream Monitor',
+    test: '✅ Test notification — TRIP Streaming Monitor',
     testBody: 'Notifications are working correctly.',
     url: 'URL'
   }
@@ -61,7 +61,7 @@ function describe(ev, lang) {
     case 'test':
       return { title: t.test, body: t.testBody };
     default:
-      return { title: ev.name || 'Stream Monitor', body: ev.type };
+      return { title: ev.name || 'TRIP Streaming Monitor', body: ev.type };
   }
 }
 

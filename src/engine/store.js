@@ -132,8 +132,8 @@ class Store {
     return n - this.devices.length;
   }
 
-  addStream(data) {
-    const s = sanitizeStream({ ...data, id: crypto.randomUUID() });
+  addStream(data, keepId) {
+    const s = sanitizeStream({ ...data, id: keepId || crypto.randomUUID() });
     this.streams.push(s);
     this.save();
     return s;
@@ -175,4 +175,4 @@ function sanitizeStream(s) {
   };
 }
 
-module.exports = { Store, DEFAULT_SETTINGS };
+module.exports = { Store, DEFAULT_SETTINGS, sanitizeStream };

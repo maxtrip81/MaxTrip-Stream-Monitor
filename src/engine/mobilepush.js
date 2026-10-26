@@ -1,5 +1,5 @@
 'use strict';
-// Notifiche push native verso l'app MaxTrip Stream Monitor per smartphone:
+// Notifiche push native verso l'app TRIP Streaming Monitor per smartphone:
 //  - Android → Firebase Cloud Messaging (API HTTP v1, account di servizio Google)
 //  - iPhone  → Apple Push Notification service (chiave .p8, HTTP/2)
 // Nessuna dipendenza esterna: i token JWT sono firmati con il modulo crypto di Node.

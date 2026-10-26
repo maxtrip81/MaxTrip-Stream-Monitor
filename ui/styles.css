@@ -189,3 +189,23 @@ details details { margin-left: 4px; }
 details.advanced { margin-bottom: 10px; }
 details.advanced summary { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
 .ytdlp-hint { display: block; margin-top: 2px; }
+
+.pick-list { list-style: none; margin: 8px 0; padding: 0; max-height: 40vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.pick-list li { padding: 8px 10px; border-top: 1px solid var(--border); font-size: 13px; }
+.pick-list li:first-child { border-top: 0; }
+.pick-list label { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; margin: 0; color: var(--text); cursor: pointer; }
+.pick-list small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+#importDialog h3 { font-size: 15px; margin: 14px 0 6px; }
+.conflict { border: 1px solid var(--amber); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.conflict .head { font-weight: 700; margin-bottom: 6px; }
+.conflict .head small { font-weight: 400; color: var(--muted); }
+.diff { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; table-layout: fixed; }
+.diff th, .diff td { text-align: left; padding: 4px 6px; border-top: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; white-space: pre-wrap; }
+.diff th { color: var(--muted); font-weight: 600; width: 26%; }
+.diff td.new { color: var(--amber); }
+.actions-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.actions-row label { flex-direction: row; align-items: center; gap: 6px; margin: 0; padding: 5px 10px; border: 1px solid var(--border); border-radius: 99px; color: var(--text); font-size: 13px; cursor: pointer; }
+.actions-row label:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.actions-row input { width: auto; }
+.apply-all { flex-direction: row !important; align-items: center; gap: 8px; }
+.apply-all select { width: auto; }

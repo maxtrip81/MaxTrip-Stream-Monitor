@@ -22,13 +22,27 @@ if (!app.requestSingleInstanceLock()) {
 
 const txt = () => L[engine && engine.store.settings.language === 'en' ? 'en' : 'it'];
 
+// L'app si chiamava "MaxTrip Stream Monitor": al primo avvio con il nuovo nome
+// si copiano flussi, impostazioni, dispositivi e registro eventi dalla vecchia cartella.
+function migrateOldData() {
+  const fs = require('fs');
+  const dst = app.getPath('userData');
+  const src = path.join(app.getPath('appData'), 'MaxTrip Stream Monitor');
+  if (fs.existsSync(path.join(dst, 'config.json')) || !fs.existsSync(path.join(src, 'config.json'))) return;
+  fs.mkdirSync(dst, { recursive: true });
+  for (const f of ['config.json', 'events.json', 'devices.json']) {
+    try { fs.copyFileSync(path.join(src, f), path.join(dst, f)); } catch (_) { /* file assente */ }
+  }
+}
+
 async function start() {
   if (process.platform === 'win32') app.setAppUserModelId('it.maxtrip.streammonitor');
+  migrateOldData();
   engine = new Engine({ dataDir: app.getPath('userData') });
   try {
     await engine.start();
   } catch (e) {
-    dialog.showErrorBox('MaxTrip Stream Monitor', `Impossibile avviare il motore / Cannot start engine:\n${e.message}`);
+    dialog.showErrorBox('TRIP Streaming Monitor', `Impossibile avviare il motore / Cannot start engine:\n${e.message}`);
     app.quit();
     return;
   }
@@ -57,12 +71,16 @@ function createWindow() {
     minWidth: 380,
     minHeight: 500,
     backgroundColor: '#0d1117',
-    title: 'MaxTrip Stream Monitor',
+    title: 'TRIP Streaming Monitor',
     icon: path.join(ROOT, 'build', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' }
   });
   win.loadURL(`http://127.0.0.1:${engine.port}/`);
+  // esportazione dei flussi: finestra "Salva con nome", proposta nella cartella Documenti
+  win.webContents.session.on('will-download', (e, item) => {
+    item.setSaveDialogOptions({ defaultPath: path.join(app.getPath('documents'), item.getFilename()) });
+  });
   win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith(`http://127.0.0.1:${engine.port}`)) { e.preventDefault(); shell.openExternal(url); }
@@ -74,7 +92,7 @@ function createWindow() {
     win.hide();
     if (!trayHintShown && Notification.isSupported()) {
       trayHintShown = true;
-      new Notification({ title: 'MaxTrip Stream Monitor', body: txt().running }).show();
+      new Notification({ title: 'TRIP Streaming Monitor', body: txt().running }).show();
     }
   });
 }
@@ -93,7 +111,7 @@ function buildTray() {
     tray = new Tray(img);
     tray.on('click', showWindow);
   }
-  tray.setToolTip('MaxTrip Stream Monitor');
+  tray.setToolTip('TRIP Streaming Monitor');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: txt().show, click: showWindow },
     { label: txt().author, enabled: false },

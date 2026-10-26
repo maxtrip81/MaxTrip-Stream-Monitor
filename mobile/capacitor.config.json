@@ -1,6 +1,6 @@
 {
   "appId": "it.maxtrip.streammonitor",
-  "appName": "Stream Monitor",
+  "appName": "TRIP Streaming Monitor",
   "webDir": "www",
   "backgroundColor": "#0d1117",
   "server": {

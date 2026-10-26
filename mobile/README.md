@@ -1,4 +1,4 @@
-# MaxTrip Stream Monitor — App per smartphone (iOS / Android)
+# TRIP Streaming Monitor — App per smartphone (iOS / Android)
 
 **Creato da Massimiliano Mascioli Trippa — [max@maxtrip.it](mailto:max@maxtrip.it)**
 
@@ -16,7 +16,7 @@ Il telefono si collega al **motore di monitoraggio** (l'app desktop sul computer
 
 | | Come |
 |---|---|
-| **Android** | Scarica `MaxTrip-Stream-Monitor-<versione>-android.apk` dalla Release (o dagli *Artifacts* della compilazione su GitHub), aprilo sul telefono e consenti l'installazione da "origini sconosciute". Per pubblicarla su Google Play vedi il punto 4. |
+| **Android** | Scarica `TRIP-Streaming-Monitor-<versione>-android.apk` dalla Release (o dagli *Artifacts* della compilazione su GitHub), aprilo sul telefono e consenti l'installazione da "origini sconosciute". Per pubblicarla su Google Play vedi il punto 4. |
 | **iPhone** | Apple non consente di installare app fuori dall'App Store senza firma. Serve un account [Apple Developer](https://developer.apple.com/programs/) (99 $/anno): apri il progetto con `npm run ios` su un Mac, seleziona il tuo Team in *Signing & Capabilities* e installa sull'iPhone collegato, oppure distribuisci con **TestFlight** / App Store (*Product → Archive*). |
 
 ### 2. Collegare l'app al motore
@@ -76,7 +76,7 @@ The iPhone and Android app has the same interface as the desktop app: stream lis
 
 The phone connects to the **monitoring engine** (the desktop app on the studio computer or the Docker server), which analyses the streams 24/7 and sends **push notifications** to the phone even when the app is closed. iOS and Android suspend background apps, so analysis does not run on the phone.
 
-1. **Install** — Android: download `MaxTrip-Stream-Monitor-<version>-android.apk` from the Release (or the GitHub build *Artifacts*) and allow installation from unknown sources. iPhone: requires an Apple Developer account; open the project with `npm run ios` on a Mac, select your Team under *Signing & Capabilities*, run on your device or distribute via TestFlight / App Store.
+1. **Install** — Android: download `TRIP-Streaming-Monitor-<version>-android.apk` from the Release (or the GitHub build *Artifacts*) and allow installation from unknown sources. iPhone: requires an Apple Developer account; open the project with `npm run ios` on a Mac, select your Team under *Signing & Capabilities*, run on your device or distribute via TestFlight / App Store.
 2. **Connect** — in the desktop app enable *Settings → Remote access* and generate a token; on the phone enter `http://COMPUTER-IP:8686` and the token, then allow notifications.
 3. **Push notifications**
    - Android: create a Firebase project, add an Android app `it.maxtrip.streammonitor`, store `google-services.json` as the GitHub secret `GOOGLE_SERVICES_JSON` (or copy it to `mobile/android/app/`), then paste a Firebase **service account** JSON in *Settings → Notifications → Smartphone app → Android*.
